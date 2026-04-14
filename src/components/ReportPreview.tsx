@@ -103,7 +103,7 @@ export default function ReportPreview({ onBack, onEditSection, onSubmit }: Repor
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Officer</p>
-                  <p className="text-sm font-medium flex items-center gap-1"><User className="w-3 h-3 text-primary" /> John Doe</p>
+                  <p className="text-sm font-medium flex items-center gap-1"><User className="w-3 h-3 text-primary" /> Amina Yusuf</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Period</p>
@@ -181,7 +181,7 @@ export default function ReportPreview({ onBack, onEditSection, onSubmit }: Repor
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium leading-relaxed">
-                    I, <span className="text-primary font-bold underline decoration-primary/30 underline-offset-4">John Doe</span>, 
+                    I, <span className="text-primary font-bold underline decoration-primary/30 underline-offset-4">Amina Yusuf</span>, 
                     hereby declare that the information provided in this report for the period of 
                     <span className="font-bold"> October 2023</span> is accurate, complete, and has been verified 
                     against supporting documentation.

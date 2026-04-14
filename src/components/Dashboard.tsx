@@ -12,6 +12,7 @@ import {
   LogOut, 
   Menu,
   ChevronDown,
+  ChevronRight,
   TrendingUp,
   Clock,
   AlertCircle,
@@ -77,6 +78,8 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+import { NigeriaMap, ZONE_PERFORMANCE } from "./NigeriaMap";
+
 // --- Mock Data ---
 
 const CHART_DATA = [
@@ -89,7 +92,7 @@ const CHART_DATA = [
 ];
 
 const RECENT_ACTIVITY = [
-  { id: 1, action: "Report Submitted", user: "John Doe (Lagos)", time: "2 hours ago", status: "Pending" },
+  { id: 1, action: "Report Submitted", user: "Amina Yusuf (Lagos)", time: "2 hours ago", status: "Pending" },
   { id: 2, action: "Directive Created", user: "HQ Admin", time: "4 hours ago", status: "Active" },
   { id: 3, action: "Report Approved", user: "Zonal Director", time: "1 day ago", status: "Completed" },
   { id: 4, action: "Audit Flagged", user: "Audit Team", time: "2 days ago", status: "Flagged" },
@@ -220,34 +223,79 @@ const ZonalDirectorPanel = ({ onReviewReports }: { onReviewReports: () => void }
   </div>
 );
 
-const SDOPanel = () => (
-  <div className="space-y-6">
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>National Reporting Activity</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[400px] flex items-center justify-center bg-muted/30 rounded-md border border-dashed">
-          <div className="text-center space-y-2">
-            <MapIcon className="w-12 h-12 mx-auto text-muted-foreground" />
-            <p className="text-sm text-muted-foreground font-medium">Interactive Nigeria Map Visualization</p>
-            <p className="text-xs text-muted-foreground/60">Heatmap showing real-time reporting status per Zone</p>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Directive Tracker</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <KanbanColumn title="To Do" count={5} color="bg-slate-200" />
-          <KanbanColumn title="In Progress" count={12} color="bg-blue-100" />
-          <KanbanColumn title="Completed" count={45} color="bg-green-100" />
-        </CardContent>
-      </Card>
+const SDOPanel = () => {
+  const [selectedZone, setSelectedZone] = React.useState<string | null>(null);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border-none shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold">National Reporting Activity</CardTitle>
+              <CardDescription>Geopolitical zone compliance status</CardDescription>
+            </div>
+            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+              Live Updates
+            </Badge>
+          </CardHeader>
+          <CardContent className="flex flex-col md:flex-row items-center gap-8 py-8">
+            <NigeriaMap onZoneClick={setSelectedZone} />
+            
+            <div className="flex-1 w-full space-y-4">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Zone Details</h4>
+              <ScrollArea className="h-[250px] pr-4">
+                <div className="space-y-3">
+                  {ZONE_PERFORMANCE.map((zone) => (
+                    <div 
+                      key={zone.name} 
+                      className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                        selectedZone === zone.name ? 'ring-2 ring-primary bg-primary/5 border-primary/20' : 'bg-slate-50/50 hover:bg-slate-50'
+                      }`}
+                      onClick={() => setSelectedZone(zone.name)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-bold">{zone.name}</span>
+                        <Badge variant="outline" className={`${
+                          zone.status === 'green' ? 'text-green-600 border-green-200 bg-green-50' : 
+                          zone.status === 'yellow' ? 'text-yellow-600 border-yellow-200 bg-yellow-50' : 
+                          'text-red-600 border-red-200 bg-red-50'
+                        }`}>
+                          {zone.compliance}%
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span>{zone.pending} Pending Reports</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold">Directive Tracker</CardTitle>
+            <CardDescription>Strategic instruction status</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <KanbanColumn title="To Do" count={5} color="bg-slate-200" />
+            <KanbanColumn title="In Progress" count={12} color="bg-blue-100" />
+            <KanbanColumn title="Completed" count={45} color="bg-green-100" />
+            
+            <div className="pt-4">
+              <Button className="w-full bg-orange-action hover:bg-orange-600 gap-2">
+                <Plus className="w-4 h-4" /> Create Directive
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const HQPanel = () => (
   <div className="space-y-6">
@@ -531,7 +579,7 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
               {/* Welcome Header */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back, John</h1>
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back, {userInfo.name.split(' ')[0]}</h1>
                   <p className="text-muted-foreground">Here's what's happening in NHIA URMS today.</p>
                 </div>
                 <div className="flex gap-2">
