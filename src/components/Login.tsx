@@ -35,7 +35,7 @@ export default function Login({ onLogin }: LoginProps) {
     else if (id.startsWith("SDO")) setRole("sdo");
     else if (id.startsWith("ZD")) setRole("zonal-director");
     else if (id.startsWith("SO")) setRole("state-officer");
-    else if (id.startsWith("DG")) setRole("sdo");
+    else if (id.startsWith("DG")) setRole("dg-ceo");
     else if (id.startsWith("AUDIT")) setRole("audit");
   }, [staffId]);
 

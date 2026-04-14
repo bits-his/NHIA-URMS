@@ -61,9 +61,16 @@ import {
   Area
 } from "recharts";
 
+import ReportEntry from "./ReportEntry";
+import ReportPreview from "./ReportPreview";
+import ZonalReview from "./ZonalReview";
+import ZonalCompose from "./ZonalCompose";
+import DGCEOPanel from "./DGCEOPanel";
+
 // --- Types ---
 
-type Role = "state-officer" | "zonal-director" | "sdo" | "hq-department" | "audit";
+type Role = "state-officer" | "zonal-director" | "sdo" | "hq-department" | "audit" | "dg-ceo";
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose";
 
 interface DashboardProps {
   role: Role;
@@ -90,10 +97,16 @@ const RECENT_ACTIVITY = [
 
 // --- Sub-components for Roles ---
 
-const StateOfficerPanel = () => (
+const StateOfficerPanel = ({ onNewReport }: { onNewReport: () => void }) => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <QuickActionCard icon={<Plus className="w-6 h-6" />} title="Submit New Report" description="Start a fresh monthly submission" color="bg-orange-action" />
+      <QuickActionCard 
+        icon={<Plus className="w-6 h-6" />} 
+        title="Submit New Report" 
+        description="Start a fresh monthly submission" 
+        color="bg-orange-action" 
+        onClick={onNewReport}
+      />
       <QuickActionCard icon={<Clock className="w-6 h-6" />} title="Continue Draft" description="Resume your saved progress" color="bg-primary" />
       <QuickActionCard icon={<FileText className="w-6 h-6" />} title="View Submitted" description="Access your submission history" color="bg-primary" />
     </div>
@@ -129,8 +142,19 @@ const StateOfficerPanel = () => (
   </div>
 );
 
-const ZonalDirectorPanel = () => (
+const ZonalDirectorPanel = ({ onReviewReports }: { onReviewReports: () => void }) => (
   <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <QuickActionCard 
+        icon={<CheckSquare className="w-6 h-6" />} 
+        title="Review State Reports" 
+        description="Validate and forward state submissions" 
+        color="bg-primary" 
+        onClick={onReviewReports}
+      />
+      <QuickActionCard icon={<Compass className="w-6 h-6" />} title="Issue Directive" description="Send instructions to state offices" color="bg-primary" />
+      <QuickActionCard icon={<BarChart3 className="w-6 h-6" />} title="Zonal Analytics" description="View performance trends" color="bg-primary" />
+    </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
         <CardHeader>
@@ -337,8 +361,11 @@ const KPIStat = ({ title, value, trend, icon, trendUp }: { title: string, value:
   </Card>
 );
 
-const QuickActionCard = ({ icon, title, description, color }: { icon: React.ReactNode, title: string, description: string, color: string }) => (
-  <button className="flex flex-col items-start p-6 rounded-xl border border-border/50 bg-card hover:shadow-lg transition-all text-left group w-full">
+const QuickActionCard = ({ icon, title, description, color, onClick }: { icon: React.ReactNode, title: string, description: string, color: string, onClick?: () => void }) => (
+  <button 
+    onClick={onClick}
+    className="flex flex-col items-start p-6 rounded-xl border border-border/50 bg-card hover:shadow-lg transition-all text-left group w-full"
+  >
     <div className={`p-3 rounded-xl ${color} text-white mb-4 group-hover:scale-110 transition-transform`}>
       {icon}
     </div>
@@ -357,7 +384,7 @@ const KanbanColumn = ({ title, count, color }: { title: string, count: number, c
 // --- Main Dashboard Component ---
 
 export default function Dashboard({ role, onLogout }: DashboardProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [view, setView] = React.useState<View>("home");
 
   const getRoleLabel = (r: Role) => {
     switch(r) {
@@ -366,15 +393,35 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
       case "sdo": return "SDO / DGO";
       case "hq-department": return "HQ Department";
       case "audit": return "Audit Team";
+      case "dg-ceo": return "DG/CEO";
+      default: return "User";
     }
   };
 
+  const getUserInfo = (r: Role) => {
+    switch(r) {
+      case "state-officer": return { name: "Amina Yusuf", initials: "AY", email: "amina.y@nhia.gov.ng" };
+      case "zonal-director": return { name: "Babatunde Okafor", initials: "BO", email: "b.okafor@nhia.gov.ng" };
+      case "sdo": return { name: "Chidi Eze", initials: "CE", email: "chidi.eze@nhia.gov.ng" };
+      case "hq-department": return { name: "Danjuma Mohammed", initials: "DM", email: "d.mohammed@nhia.gov.ng" };
+      case "audit": return { name: "Elizabeth Adeyemi", initials: "EA", email: "e.adeyemi@nhia.gov.ng" };
+      case "dg-ceo": return { name: "Dr. Kelechi Iheanacho", initials: "KI", email: "dg.ceo@nhia.gov.ng" };
+      default: return { name: "NHIA Staff", initials: "NS", email: "staff@nhia.gov.ng" };
+    }
+  };
+
+  const userInfo = getUserInfo(role);
+
   const menuItems = [
-    { icon: <Home className="w-4 h-4" />, label: "Home", active: true },
-    { icon: <FileText className="w-4 h-4" />, label: "Submit Report" },
-    { icon: <CheckSquare className="w-4 h-4" />, label: "Review Reports" },
-    { icon: <Compass className="w-4 h-4" />, label: "Directives" },
+    { icon: <Home className="w-4 h-4" />, label: "Dashboard", active: view === "home", onClick: () => setView("home") },
+    { icon: <Flag className="w-4 h-4" />, label: "Directives", hidden: role !== "dg-ceo" },
+    { icon: <FileText className="w-4 h-4" />, label: "National Reports", hidden: role !== "dg-ceo" },
+    { icon: <MapIcon className="w-4 h-4" />, label: "Zonal Performance", hidden: role !== "dg-ceo" },
+    { icon: <FileText className="w-4 h-4" />, label: "Submit Report", active: view === "report-entry", onClick: () => setView("report-entry"), hidden: role === "dg-ceo" },
+    { icon: <CheckSquare className="w-4 h-4" />, label: "Review Reports", active: view === "zonal-review", onClick: () => setView("zonal-review"), hidden: role === "dg-ceo" },
+    { icon: <Compass className="w-4 h-4" />, label: "Directives", hidden: role === "dg-ceo" },
     { icon: <Database className="w-4 h-4" />, label: "HQ Data" },
+    { icon: <Shield className="w-4 h-4" />, label: "Audit & Compliance", hidden: role !== "dg-ceo" },
     { icon: <Archive className="w-4 h-4" />, label: "Archive" },
     { icon: <Shield className="w-4 h-4" />, label: "Audit" },
     { icon: <Bell className="w-4 h-4" />, label: "Notifications" },
@@ -396,12 +443,13 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
           <SidebarContent>
             <ScrollArea className="h-full py-4">
               <SidebarMenu>
-                {menuItems.map((item) => (
+                {menuItems.filter(item => !(item as any).hidden).map((item) => (
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton 
                       tooltip={item.label}
                       isActive={item.active}
                       className="h-10 px-4"
+                      onClick={(item as any).onClick}
                     >
                       {item.icon}
                       <span className="ml-3 font-medium">{item.label}</span>
@@ -420,7 +468,9 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
         </Sidebar>
 
         <SidebarInset className="flex flex-col overflow-hidden">
-          {/* Top Nav */}
+          {view === "home" ? (
+            <>
+              {/* Top Nav */}
           <header className="h-16 border-b border-border/50 bg-white/80 backdrop-blur-md flex items-center justify-between px-6 z-20">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
@@ -444,18 +494,18 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
               
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5 text-muted-foreground" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-orange-action rounded-full border-2 border-white" />
+                <span className={`absolute top-2 right-2 w-2 h-2 rounded-full border-2 border-white ${role === 'dg-ceo' ? 'bg-red-500' : 'bg-orange-action'}`} />
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger className="p-1 h-auto gap-2 hover:bg-slate-100 rounded-full pr-3 flex items-center transition-colors outline-none cursor-pointer">
                   <Avatar className="w-8 h-8 border border-border/50">
-                    <AvatarImage src="https://picsum.photos/seed/user/200" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarImage src={`https://picsum.photos/seed/${userInfo.initials}/200`} />
+                    <AvatarFallback>{userInfo.initials}</AvatarFallback>
                   </Avatar>
                   <div className="text-left hidden md:block">
-                    <p className="text-xs font-bold leading-none">John Doe</p>
-                    <p className="text-[10px] text-muted-foreground">ssirdeeq@gmail.com</p>
+                    <p className="text-xs font-bold leading-none">{userInfo.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{userInfo.email}</p>
                   </div>
                   <ChevronDown className="w-3 h-3 text-muted-foreground" />
                 </DropdownMenuTrigger>
@@ -488,7 +538,10 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
                   <Button variant="outline" className="gap-2">
                     <BarChart3 className="w-4 h-4" /> Reports
                   </Button>
-                  <Button className="bg-orange-action hover:bg-orange-600 gap-2 shadow-lg shadow-orange-500/20">
+                  <Button 
+                    className="bg-orange-action hover:bg-orange-600 gap-2 shadow-lg shadow-orange-500/20"
+                    onClick={() => setView("report-entry")}
+                  >
                     <Plus className="w-4 h-4" /> New Submission
                   </Button>
                 </div>
@@ -512,8 +565,9 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
                   >
-                    {role === "state-officer" && <StateOfficerPanel />}
-                    {role === "zonal-director" && <ZonalDirectorPanel />}
+                    {role === "state-officer" && <StateOfficerPanel onNewReport={() => setView("report-entry")} />}
+                    {role === "zonal-director" && <ZonalDirectorPanel onReviewReports={() => setView("zonal-review")} />}
+                    {role === "dg-ceo" && <DGCEOPanel />}
                     {role === "sdo" && <SDOPanel />}
                     {role === "hq-department" && <HQPanel />}
                     {role === "audit" && <AuditPanel />}
@@ -578,6 +632,20 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
               </div>
             </div>
           </main>
+            </>
+          ) : view === "report-entry" ? (
+            <ReportEntry onBack={() => setView("home")} onPreview={() => setView("report-preview")} />
+          ) : view === "report-preview" ? (
+            <ReportPreview 
+              onBack={() => setView("report-entry")} 
+              onEditSection={() => setView("report-entry")} 
+              onSubmit={() => setView("home")} 
+            />
+          ) : view === "zonal-review" ? (
+            <ZonalReview onCompose={() => setView("zonal-compose")} />
+          ) : (
+            <ZonalCompose onBack={() => setView("zonal-review")} onForward={() => setView("home")} />
+          )}
         </SidebarInset>
       </div>
     </SidebarProvider>
