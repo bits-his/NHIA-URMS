@@ -224,77 +224,7 @@ const ZonalDirectorPanel = ({ onReviewReports }: { onReviewReports: () => void }
 );
 
 const SDOPanel = () => {
-  const [selectedZone, setSelectedZone] = React.useState<string | null>(null);
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-none shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-bold">National Reporting Activity</CardTitle>
-              <CardDescription>Geopolitical zone compliance status</CardDescription>
-            </div>
-            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-              Live Updates
-            </Badge>
-          </CardHeader>
-          <CardContent className="flex flex-col md:flex-row items-center gap-8 py-8">
-            <NigeriaMap onZoneClick={setSelectedZone} />
-            
-            <div className="flex-1 w-full space-y-4">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Zone Details</h4>
-              <ScrollArea className="h-[250px] pr-4">
-                <div className="space-y-3">
-                  {ZONE_PERFORMANCE.map((zone) => (
-                    <div 
-                      key={zone.name} 
-                      className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                        selectedZone === zone.name ? 'ring-2 ring-primary bg-primary/5 border-primary/20' : 'bg-slate-50/50 hover:bg-slate-50'
-                      }`}
-                      onClick={() => setSelectedZone(zone.name)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-bold">{zone.name}</span>
-                        <Badge variant="outline" className={`${
-                          zone.status === 'green' ? 'text-green-600 border-green-200 bg-green-50' : 
-                          zone.status === 'yellow' ? 'text-yellow-600 border-yellow-200 bg-yellow-50' : 
-                          'text-red-600 border-red-200 bg-red-50'
-                        }`}>
-                          {zone.compliance}%
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                        <span>{zone.pending} Pending Reports</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold">Directive Tracker</CardTitle>
-            <CardDescription>Strategic instruction status</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <KanbanColumn title="To Do" count={5} color="bg-slate-200" />
-            <KanbanColumn title="In Progress" count={12} color="bg-blue-100" />
-            <KanbanColumn title="Completed" count={45} color="bg-green-100" />
-            
-            <div className="pt-4">
-              <Button className="w-full bg-orange-action hover:bg-orange-600 gap-2">
-                <Plus className="w-4 h-4" /> Create Directive
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+  return <SDOHub />;
 };
 
 const HQPanel = () => (
@@ -386,6 +316,8 @@ const AuditPanel = () => (
     </Card>
   </div>
 );
+
+import SDOHub from "./SDOHub";
 
 // --- Helper Components ---
 
