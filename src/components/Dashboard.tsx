@@ -31,16 +31,12 @@ import AnnualReportForm from "./AnnualReportForm";
 import AnnualReportsList from "./AnnualReportsList";
 import AnnualReportDetail from "./AnnualReportDetail";
 import { NigeriaMap, ZONE_PERFORMANCE } from "./NigeriaMap";
-import AdminOverview from "./admin/AdminOverview";
-import AdminUsersPage from "./admin/AdminUsersPage";
-import AdminZonesPage from "./admin/AdminZonesPage";
-import AdminStatesPage from "./admin/AdminStatesPage";
-import AdminDepartmentsPage from "./admin/AdminDepartmentsPage";
-import AdminUnitsPage from "./admin/AdminUnitsPage";
+import AdminSettingsPage from "./admin/AdminSettingsPage";
+import SidebarNav from "./SidebarNav";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-director" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
-type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "admin-overview" | "admin-users" | "admin-zones" | "admin-states" | "admin-departments" | "admin-units";
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings";
 interface DashboardProps { role: Role; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -76,35 +72,27 @@ const activityDot: Record<string, string> = {
 
 // ─── Sidebar nav items per role ───────────────────────────────────────────────
 function getMenuItems(role: Role, view: View, setView: (v: View) => void) {
-  if (role === "admin") {
-    return [
-      { icon: <Home className="w-4 h-4" />,      label: "Overview",      active: view === "admin-overview",     onClick: () => setView("admin-overview")     },
-      { icon: <Users className="w-4 h-4" />,     label: "Users",         active: view === "admin-users",        onClick: () => setView("admin-users")        },
-      { icon: <MapIcon className="w-4 h-4" />,   label: "Zonal Offices", active: view === "admin-zones",        onClick: () => setView("admin-zones")        },
-      { icon: <Database className="w-4 h-4" />,  label: "State Offices", active: view === "admin-states",       onClick: () => setView("admin-states")       },
-      { icon: <Archive className="w-4 h-4" />,   label: "Departments",   active: view === "admin-departments",  onClick: () => setView("admin-departments")  },
-      { icon: <Settings className="w-4 h-4" />,  label: "Units",         active: view === "admin-units",        onClick: () => setView("admin-units")        },
-    ];
-  }
   const all = [
-    { icon: <Home className="w-4 h-4" />,       label: "Dashboard",       active: view === "home",         onClick: () => setView("home"),         roles: "all"            },
-    { icon: <Flag className="w-4 h-4" />,        label: "Directives",      active: false,                   onClick: undefined,                     roles: "dg-ceo"         },
-    { icon: <FileText className="w-4 h-4" />,    label: "National Reports",active: false,                   onClick: undefined,                     roles: "dg-ceo"         },
-    { icon: <MapIcon className="w-4 h-4" />,     label: "Zonal Performance",active: false,                  onClick: undefined,                     roles: "dg-ceo"         },
-    { icon: <FileText className="w-4 h-4" />,    label: "Submit Report",   active: view === "report-entry",        onClick: () => setView("report-entry"),        roles: "!dg-ceo" },
-    { icon: <FileText className="w-4 h-4" />,    label: "Annual Report",   active: view === "annual-report",       onClick: () => setView("annual-report"),       roles: "!dg-ceo" },
-    { icon: <History className="w-4 h-4" />,     label: "My Submissions",  active: view === "annual-reports-list", onClick: () => setView("annual-reports-list"), roles: "!dg-ceo" },
-    { icon: <CheckSquare className="w-4 h-4" />, label: "Review Reports",  active: view === "zonal-review", onClick: () => setView("zonal-review"), roles: "!dg-ceo"        },
-    { icon: <Compass className="w-4 h-4" />,     label: "Directives",      active: false,                   onClick: undefined,                     roles: "!dg-ceo"        },
-    { icon: <Database className="w-4 h-4" />,    label: "HQ Data",         active: false,                   onClick: undefined,                     roles: "all"            },
-    { icon: <Shield className="w-4 h-4" />,      label: "Audit & Compliance",active: false,                 onClick: undefined,                     roles: "dg-ceo,audit"   },
-    { icon: <Archive className="w-4 h-4" />,     label: "Archive",         active: false,                   onClick: undefined,                     roles: "all"            },
-    { icon: <Bell className="w-4 h-4" />,        label: "Notifications",   active: false,                   onClick: undefined,                     roles: "all"            },
-    { icon: <Settings className="w-4 h-4" />,    label: "Settings",        active: false,                   onClick: undefined,                     roles: "all"            },
+    { icon: <Home className="w-4 h-4" />,       label: "Dashboard",         active: view === "home",                 onClick: () => setView("home"),                 roles: "all"          },
+    { icon: <Flag className="w-4 h-4" />,        label: "Directives",        active: false,                           onClick: undefined,                             roles: "dg-ceo,admin" },
+    { icon: <FileText className="w-4 h-4" />,    label: "National Reports",  active: false,                           onClick: undefined,                             roles: "dg-ceo,admin" },
+    { icon: <MapIcon className="w-4 h-4" />,     label: "Zonal Performance", active: false,                           onClick: undefined,                             roles: "dg-ceo,admin" },
+    { icon: <FileText className="w-4 h-4" />,    label: "Submit Report",     active: view === "report-entry",         onClick: () => setView("report-entry"),         roles: "!dg-ceo"      },
+    { icon: <FileText className="w-4 h-4" />,    label: "Annual Report",     active: view === "annual-report",        onClick: () => setView("annual-report"),        roles: "!dg-ceo"      },
+    { icon: <History className="w-4 h-4" />,     label: "My Submissions",    active: view === "annual-reports-list",  onClick: () => setView("annual-reports-list"),  roles: "!dg-ceo"      },
+    { icon: <CheckSquare className="w-4 h-4" />, label: "Review Reports",    active: view === "zonal-review",         onClick: () => setView("zonal-review"),         roles: "!dg-ceo"      },
+    { icon: <Compass className="w-4 h-4" />,     label: "Directives",        active: false,                           onClick: undefined,                             roles: "!dg-ceo"      },
+    { icon: <Database className="w-4 h-4" />,    label: "HQ Data",           active: false,                           onClick: undefined,                             roles: "all"          },
+    { icon: <Shield className="w-4 h-4" />,      label: "Audit & Compliance",active: false,                           onClick: undefined,                             roles: "dg-ceo,audit,admin" },
+    { icon: <Archive className="w-4 h-4" />,     label: "Archive",           active: false,                           onClick: undefined,                             roles: "all"          },
+    { icon: <Bell className="w-4 h-4" />,        label: "Notifications",     active: false,                           onClick: undefined,                             roles: "all"          },
+    { icon: <Settings className="w-4 h-4" />,    label: "Settings",          active: view === "settings",             onClick: () => setView("settings"),             roles: "admin"        },
+    { icon: <Settings className="w-4 h-4" />,    label: "Settings",          active: false,                           onClick: undefined,                             roles: "!admin"       },
   ];
   return all.filter(item => {
     if (item.roles === "all") return true;
-    if (item.roles === `!dg-ceo`) return role !== "dg-ceo";
+    if (item.roles === "!dg-ceo") return role !== "dg-ceo";
+    if (item.roles === "!admin")  return role !== "admin";
     return item.roles.split(",").includes(role);
   });
 }
@@ -385,7 +373,7 @@ function AuditPanel() {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard({ role, onLogout }: DashboardProps) {
-  const [view, setView] = React.useState<View>(role === "admin" ? "admin-overview" : "home");
+  const [view, setView] = React.useState<View>(role === "admin" ? "settings" : "home");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [selectedReportRef, setSelectedReportRef] = React.useState<string | null>(null);
   const userInfo = getUserInfo(role);
@@ -426,25 +414,7 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
         )}
 
         {/* Nav */}
-        <ScrollArea className="flex-1 px-2 py-2 scrollbar-thin">
-          <nav className="space-y-0.5">
-            {menuItems.map(item => (
-              <button key={item.label} onClick={item.onClick}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all group ${
-                  item.active
-                    ? "bg-[#25a872] text-white shadow-md shadow-[#25a872]/30"
-                    : "text-white/60 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <span className={`shrink-0 ${item.active ? "text-white" : "text-white/50 group-hover:text-white"}`}>
-                  {item.icon}
-                </span>
-                {sidebarOpen && <span className="text-xs font-semibold truncate">{item.label}</span>}
-                {sidebarOpen && item.active && <ChevronRight className="w-3 h-3 ml-auto text-white/70" />}
-              </button>
-            ))}
-          </nav>
-        </ScrollArea>
+        <SidebarNav role={role} view={view} setView={setView} sidebarOpen={sidebarOpen} />
 
         {/* Logout */}
         <div className="p-3 border-t border-white/10">
@@ -735,18 +705,8 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
                 referenceId={selectedReportRef!}
                 onBack={() => setView("annual-reports-list")}
               />
-            ) : view === "admin-overview" ? (
-              <div className="relative z-10 p-6 max-w-7xl mx-auto"><AdminOverview /></div>
-            ) : view === "admin-users" ? (
-              <div className="relative z-10 p-6 max-w-7xl mx-auto"><AdminUsersPage /></div>
-            ) : view === "admin-zones" ? (
-              <div className="relative z-10 p-6 max-w-7xl mx-auto"><AdminZonesPage /></div>
-            ) : view === "admin-states" ? (
-              <div className="relative z-10 p-6 max-w-7xl mx-auto"><AdminStatesPage /></div>
-            ) : view === "admin-departments" ? (
-              <div className="relative z-10 p-6 max-w-7xl mx-auto"><AdminDepartmentsPage /></div>
-            ) : view === "admin-units" ? (
-              <div className="relative z-10 p-6 max-w-7xl mx-auto"><AdminUnitsPage /></div>
+            ) : view === "settings" ? (
+              <AdminSettingsPage />
             ) : (
               <ZonalCompose onBack={() => setView("zonal-review")} onForward={() => setView("home")} />
             )}
