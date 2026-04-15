@@ -58,22 +58,39 @@ const getUser = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// Role → Staff ID prefix map
+const ROLE_PREFIX = {
+  "admin":          "ADMIN",
+  "state-officer":  "SO",
+  "zonal-director": "ZD",
+  "sdo":            "SDO",
+  "hq-department":  "HQ",
+  "dg-ceo":         "DG",
+};
+
+const generateStaffId = async (role) => {
+  const prefix = ROLE_PREFIX[role] || "USR";
+  const count = await User.count({ where: { role } });
+  return `${prefix}-${String(count + 1).padStart(4, "0")}`;
+};
+
 const createUser = async (req, res, next) => {
   try {
-    const { name, staff_id, email, password, role, zone_id, state_id } = req.body;
-    if (!name || !staff_id || !password || !role) {
-      return res.status(400).json({ success: false, message: "name, staff_id, password, role required" });
+    const { name, email, password, role, zone_id, state_id } = req.body;
+    if (!name || !password || !role) {
+      return res.status(400).json({ success: false, message: "name, password, role required" });
     }
     if (!ROLES.includes(role)) {
       return res.status(400).json({ success: false, message: `Invalid role. Valid: ${ROLES.join(", ")}` });
     }
+    const staff_id = await generateStaffId(role);
     const hashed = await bcrypt.hash(password, 12);
     const user = await User.create({ name, staff_id, email, password: hashed, role, zone_id, state_id });
     const { password: _pw, ...data } = user.toJSON();
     res.status(201).json({ success: true, data });
   } catch (err) {
     if (err.name === "SequelizeUniqueConstraintError") {
-      return res.status(409).json({ success: false, message: "staff_id or email already exists" });
+      return res.status(409).json({ success: false, message: "email already exists" });
     }
     next(err);
   }

@@ -23,7 +23,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 const inputCls = "w-full pl-3 pr-3 h-11 rounded-xl border border-[#d4e8dc] bg-[#f4f7f5] text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-[#25a872] focus:border-[#25a872] outline-none transition-all";
-const EMPTY = { name: "", staff_id: "", email: "", password: "", role: "state-officer", zone_id: "", state_id: "", is_active: true };
+const EMPTY = { name: "", email: "", password: "", role: "state-officer", zone_id: "", state_id: "", is_active: true };
 
 export default function AdminUsersPage({ showOverview = false }: { showOverview?: boolean }) {
   const [users, setUsers] = React.useState<AdminUser[]>([]);
@@ -79,14 +79,14 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
   const openCreate = () => { setForm({ ...EMPTY }); setEditing(null); setModal("create"); };
   const openEdit = (u: AdminUser) => {
     setEditing(u);
-    setForm({ name: u.name, staff_id: u.staff_id, email: u.email || "", password: "", role: u.role, zone_id: String(u.zone_id || ""), state_id: String(u.state_id || ""), is_active: u.is_active });
+    setForm({ name: u.name, email: u.email || "", password: "", role: u.role, zone_id: String(u.zone_id || ""), state_id: String(u.state_id || ""), is_active: u.is_active });
     setModal("edit");
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     try {
-      const payload: any = { name: form.name, staff_id: form.staff_id, email: form.email || undefined, role: form.role, zone_id: form.zone_id ? Number(form.zone_id) : undefined, state_id: form.state_id ? Number(form.state_id) : undefined, is_active: form.is_active };
+      const payload: any = { name: form.name, email: form.email || undefined, role: form.role, zone_id: form.zone_id ? Number(form.zone_id) : undefined, state_id: form.state_id ? Number(form.state_id) : undefined, is_active: form.is_active };
       if (form.password) payload.password = form.password;
       if (modal === "create") { if (!form.password) { toast.error("Password required"); setSaving(false); return; } await usersApi.create(payload); toast.success("User created"); }
       else if (editing) { await usersApi.update(editing.id, payload); toast.success("User updated"); }
@@ -204,7 +204,9 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
       <AdminModal title={modal === "create" ? "Add New User" : "Edit User"} open={modal !== null} onClose={() => setModal(null)}>
         <form onSubmit={handleSave} className="space-y-4">
           <Field label="Full Name" required><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></Field>
-          <Field label="Staff ID" required><input className={inputCls} value={form.staff_id} onChange={e => setForm(f => ({ ...f, staff_id: e.target.value }))} required disabled={modal === "edit"} /></Field>
+          {modal === "create" && (
+            <p className="text-xs text-slate-400 -mt-2">Staff ID will be auto-generated based on role (e.g. SO-0001, ZD-0001)</p>
+          )}
           <Field label="Email"><input type="email" className={inputCls} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></Field>
           <Field label={modal === "create" ? "Password" : "New Password (leave blank to keep)"} required={modal === "create"}>
             <input type="password" className={inputCls} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required={modal === "create"} />
