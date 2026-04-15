@@ -130,6 +130,16 @@
   .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: #d4e8dc; border-radius: 99px; }
+
+  /* button inset highlight — gives a subtle top-edge gloss */
+  .btn-gloss::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, transparent 60%);
+    pointer-events: none;
+  }
 }
 
 @layer base {
