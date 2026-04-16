@@ -1,12 +1,8 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import * as React from "react";
 import Login from "@/src/components/Login";
 import Dashboard from "@/src/components/Dashboard";
 import { Toaster } from "@/components/ui/sonner";
+import type { AccessEntry } from "@/src/access/types";
 
 type Role = "state-officer" | "zonal-director" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
 
@@ -20,17 +16,24 @@ export interface UserContext {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-  const [userCtx, setUserCtx] = React.useState<UserContext>({ role: "state-officer", staffId: "", zoneId: null, stateId: null });
+  const [userRole, setUserRole] = React.useState<Role>("state-officer");
+  const [access, setAccess] = React.useState<AccessEntry[]>([]);
 
-  const handleLogin = (role: string, staffId = "") => {
-    setUserCtx({ role: role as Role, staffId, zoneId: null, stateId: null });
+  const handleLogin = (role: string, accessArr: AccessEntry[]) => {
+    setUserRole(role as Role);
+    setAccess(accessArr);
     setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setAccess([]);
   };
 
   return (
     <>
       {isAuthenticated ? (
-        <Dashboard userCtx={userCtx} onLogout={() => setIsAuthenticated(false)} />
+        <Dashboard role={userRole} access={access} onLogout={handleLogout} />
       ) : (
         <Login onLogin={handleLogin} />
       )}

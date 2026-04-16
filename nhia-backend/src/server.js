@@ -19,7 +19,18 @@ const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000" }));
+app.use(cors({
+  origin: (origin, cb) => {
+    const allowed = [
+      process.env.CLIENT_URL || "http://localhost:5173",
+      "http://localhost:3000",
+      "http://localhost:5173",
+    ];
+    if (!origin || allowed.includes(origin)) return cb(null, true);
+    cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(morgan("dev"));
 

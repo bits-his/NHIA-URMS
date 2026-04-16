@@ -1,282 +1,151 @@
 import * as React from "react";
 import {
-  Home, FileText, ChevronDown, ChevronRight,
-  Banknote, Building2, Users,
-  ShieldCheck, ClipboardList,
-  LayoutGrid, Briefcase, PackageSearch,
-  FolderKanban, History, CheckSquare,
-  Flag, MapPin, Database, Archive, Bell, Settings,
+  ChevronDown, ChevronRight, Settings, Home, BarChart3, FileText,
+  CheckSquare, DollarSign, ShieldCheck, Wifi, LayoutGrid, Briefcase,
+  Flag, Database, Archive, Bell, Users, ClipboardList, PackageSearch,
+  FolderKanban, Radio, Wrench, MapPin, Scale, Megaphone, BookOpen,
+  Activity, TrendingUp,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import type { AccessEntry } from "@/src/access/types";
 
 type View = string;
 
-interface LeafItem {
-  type: "leaf";
-  label: string;
-  icon: React.ReactNode;
-  view?: View;
-  onClick?: () => void;
-  roles?: string;
+interface SidebarNavProps {
+  role: string;
+  access: AccessEntry[];
+  view: View;
+  setView: (v: View) => void;
+  sidebarOpen: boolean;
 }
 
-interface GroupItem {
-  type: "group";
-  label: string;
-  icon: React.ReactNode;
-  roles?: string;
-  children: (LeafItem | GroupItem)[];
-}
+// ─── Icon map — matches MODULE_CONFIG titles ──────────────────────────────────
+const MODULE_ICONS: Record<string, React.ReactNode> = {
+  "Dashboard":            <Home className="w-4 h-4" />,
+  "Annual Reports":       <FileText className="w-4 h-4" />,
+  "Finance & Admin":      <DollarSign className="w-4 h-4" />,
+  "Standards & Quality":  <ShieldCheck className="w-4 h-4" />,
+  "ICT Support":          <Wifi className="w-4 h-4" />,
+  "Programmes":           <LayoutGrid className="w-4 h-4" />,
+  "SDO":                  <Briefcase className="w-4 h-4" />,
+  "Directives":           <Flag className="w-4 h-4" />,
+  "Reports":              <BarChart3 className="w-4 h-4" />,
+  "HQ Data":              <Database className="w-4 h-4" />,
+  "Audit & Compliance":   <ClipboardList className="w-4 h-4" />,
+  "Human Resources":      <Users className="w-4 h-4" />,
+  "Planning & Research":  <TrendingUp className="w-4 h-4" />,
+  "SERVICOM":             <Activity className="w-4 h-4" />,
+  "Special Projects":     <FolderKanban className="w-4 h-4" />,
+  "Communications":       <Megaphone className="w-4 h-4" />,
+  "Legal Services":       <Scale className="w-4 h-4" />,
+  "Archive":              <Archive className="w-4 h-4" />,
+  "Notifications":        <Bell className="w-4 h-4" />,
+  "Settings":             <Settings className="w-4 h-4" />,
+};
 
-type NavItem = LeafItem | GroupItem;
+// ─── Path → view key map for known routed views ───────────────────────────────
+const PATH_TO_VIEW: Record<string, string> = {
+  "/dashboard":                   "home",
+  "/annual-reports/new":          "annual-report",
+  "/annual-reports/mine":         "annual-reports-list",
+  "/annual-reports/submit":       "report-entry",
+  "/annual-reports/review":       "zonal-review",
+  "/sdo/stock-verification":      "stock-verification",
+  "/sdo/my-verifications":        "stock-verifications-list",
+  "/sdo/assets":                  "stock-assets",
+  "/settings/users":              "settings",
+  "/settings/privileges":         "settings",
+  "/settings/zones":              "settings",
+  "/settings/states":             "settings",
+  "/settings/departments":        "settings",
+  "/settings/units":              "settings",
+};
 
-// ─── Nav tree definition ──────────────────────────────────────────────────────
-
-export function buildNavTree(
-  role: string,
-  view: View,
-  setView: (v: View) => void
-): NavItem[] {
-  return [
-    // ── Dashboard ──────────────────────────────────────────────────────────
-    {
-      type: "leaf",
-      label: "Dashboard",
-      icon: <Home className="w-4 h-4" />,
-      view: "home",
-      onClick: () => setView("home"),
-      roles: "all",
-    },
-
-    // ── Annual Reports ─────────────────────────────────────────────────────
-    {
-      type: "group",
-      label: "Annual Reports",
-      icon: <FileText className="w-4 h-4" />,
-      roles: "!dg-ceo",
-      children: [
-        { type: "leaf", label: "New Annual Report", icon: <FileText className="w-3.5 h-3.5" />,  view: "annual-report",        onClick: () => setView("annual-report") },
-        { type: "leaf", label: "My Submissions",    icon: <History className="w-3.5 h-3.5" />,   view: "annual-reports-list",  onClick: () => setView("annual-reports-list") },
-      ],
-    },
- 
-    // ── Finance & Admin Department ─────────────────────────────────────────
-    {
-      type: "group",
-      label: "Finance & Admin Dept",
-      icon: <Building2 className="w-4 h-4" />,
-      roles: "all",
-      children: [
-        {
-          type: "group",
-          label: "Finance",
-          icon: <Banknote className="w-3.5 h-3.5" />,
-          children: [
-            { type: "leaf", label: "Monthly Report", icon: <FileText className="w-3 h-3" />, view: "finance-monthly", onClick: () => setView("finance-monthly") },
-          ],
-        },
-        {
-          type: "group",
-          label: "Admin",
-          icon: <Briefcase className="w-3.5 h-3.5" />,
-          children: [
-            { type: "leaf", label: "Monthly Report", icon: <FileText className="w-3 h-3" />, view: "admin-monthly", onClick: () => setView("admin-monthly") },
-          ],
-        },
-      ],
-    },
-
-    // ── Standards & Quality Assurance ──────────────────────────────────────
-    {
-      type: "group",
-      label: "Standards & Quality Assurance",
-      icon: <ShieldCheck className="w-4 h-4" />,
-      roles: "all",
-      children: [
-        {
-          type: "group",
-          label: "HMO/HCP Quality Assurance",
-          icon: <ShieldCheck className="w-3.5 h-3.5" />,
-          children: [
-            { type: "leaf", label: "Monthly Report", icon: <FileText className="w-3 h-3" />, view: "sqa-monthly", onClick: () => setView("sqa-monthly") },
-          ],
-        },
-        {
-          type: "group",
-          label: "Enrollee Complaints / SHIA Liaison",
-          icon: <ClipboardList className="w-3.5 h-3.5" />,
-          children: [
-            { type: "leaf", label: "Monthly Report", icon: <FileText className="w-3 h-3" />, view: "complaints-monthly", onClick: () => setView("complaints-monthly") },
-          ],
-        },
-      ],
-    },
-
-    // ── Zonal ICT Support ──────────────────────────────────────────────────
-    {
-      type: "group",
-      label: "Zonal ICT Support",
-      icon: <Database className="w-4 h-4" />,
-      roles: "all",
-      children: [
-        { type: "leaf", label: "ICT Support Desk",  icon: <FileText className="w-3.5 h-3.5" /> },
-        { type: "leaf", label: "Systems & Network", icon: <FileText className="w-3.5 h-3.5" /> },
-      ],
-    },
-
-    // ── Programmes ─────────────────────────────────────────────────────────
-    {
-      type: "group",
-      label: "Programmes",
-      icon: <LayoutGrid className="w-4 h-4" />,
-      roles: "all",
-      children: [
-        {
-          type: "group",
-          label: "Enrolment",
-          icon: <Users className="w-3.5 h-3.5" />,
-          children: [
-            { type: "leaf", label: "Monthly Report", icon: <FileText className="w-3 h-3" />, view: "programmes-monthly", onClick: () => setView("programmes-monthly") },
-          ],
-        },
-        {
-          type: "group",
-          label: "Enrollment Enquiries & Outreach",
-          icon: <FolderKanban className="w-3.5 h-3.5" />,
-          children: [
-            { type: "leaf", label: "Monthly Report", icon: <FileText className="w-3 h-3" />, view: "outreach-monthly", onClick: () => setView("outreach-monthly") },
-          ],
-        },
-      ],
-    },
-
-    // ── SDO ────────────────────────────────────────────────────────────────
-    {
-      type: "group",
-      label: "SDO",
-      icon: <Briefcase className="w-4 h-4" />,
-      roles: "all",
-      children: [
-        { type: "leaf", label: "Stock Verification",  icon: <PackageSearch className="w-3.5 h-3.5" />, view: "stock-verification",       onClick: () => setView("stock-verification") },
-        { type: "leaf", label: "My Verifications",    icon: <History className="w-3.5 h-3.5" />,       view: "stock-verifications-list", onClick: () => setView("stock-verifications-list") },
-        { type: "leaf", label: "Asset Register",      icon: <Database className="w-3.5 h-3.5" />,      view: "stock-assets",             onClick: () => setView("stock-assets") },
-      ],
-    },
-
-    // ── DG/CEO only ────────────────────────────────────────────────────────
-    { type: "leaf", label: "Directives",       icon: <Flag className="w-4 h-4" />,    roles: "dg-ceo" },
-    { type: "leaf", label: "National Reports", icon: <FileText className="w-4 h-4" />, roles: "dg-ceo" },
-    { type: "leaf", label: "Zonal Performance",icon: <MapPin className="w-4 h-4" />,  roles: "dg-ceo" },
-
-    // ── Common bottom items ────────────────────────────────────────────────
-    { type: "leaf", label: "HQ Data",      icon: <Database className="w-4 h-4" />, roles: "all" },
-    { type: "leaf", label: "Archive",      icon: <Archive className="w-4 h-4" />,  roles: "all" },
-    { type: "leaf", label: "Notifications",icon: <Bell className="w-4 h-4" />,     roles: "all" },
-    {
-      type: "leaf",
-      label: "Settings",
-      icon: <Settings className="w-4 h-4" />,
-      view: "settings",
-      onClick: () => setView("settings"),
-      roles: "admin",
-    },
-    { type: "leaf", label: "Settings", icon: <Settings className="w-4 h-4" />, roles: "!admin" },
-  ];
-}
-
-// ─── Role filter ──────────────────────────────────────────────────────────────
-
-function isVisible(item: NavItem, role: string): boolean {
-  const r = item.roles;
-  if (!r || r === "all") return true;
-  if (r === "!dg-ceo") return role !== "dg-ceo";
-  if (r === "!admin")  return role !== "admin";
-  return r.split(",").map(s => s.trim()).includes(role);
-}
-
-// ─── Leaf node ────────────────────────────────────────────────────────────────
-
-function NavLeaf({
-  item, view, depth, sidebarOpen,
-}: {
-  item: LeafItem; view: View; depth: number; sidebarOpen: boolean;
+// ─── Single child link ────────────────────────────────────────────────────────
+function ChildLink({ title, path, view, setView, sidebarOpen }: {
+  title: string; path: string; view: View;
+  setView: (v: View) => void; sidebarOpen: boolean;
 }) {
-  const active = !!item.view && item.view === view;
-  const indent = depth === 1 ? "pl-7" : depth === 2 ? "pl-11" : "pl-3";
+  const mappedView = PATH_TO_VIEW[path];
+  const active = mappedView ? view === mappedView : false;
 
   return (
     <button
-      onClick={item.onClick}
-      className={`w-full flex items-center gap-2.5 ${indent} pr-3 py-2 rounded-xl text-left transition-all group ${
+      onClick={() => mappedView && setView(mappedView)}
+      className={`w-full flex items-center gap-2.5 pl-7 pr-3 py-2 rounded-xl text-left transition-all group ${
         active
           ? "bg-[#25a872] text-white shadow-md shadow-[#25a872]/30"
           : "text-white/60 hover:bg-white/10 hover:text-white"
-      }`}
+      } ${!mappedView ? "opacity-60 cursor-default" : "cursor-pointer"}`}
     >
-      <span className={`shrink-0 ${active ? "text-white" : "text-white/50 group-hover:text-white"}`}>
-        {item.icon}
-      </span>
-      {sidebarOpen && (
-        <span className="text-xs font-semibold truncate flex-1">{item.label}</span>
-      )}
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+        active ? "bg-white" : "bg-white/30 group-hover:bg-white/60"
+      }`} />
+      {sidebarOpen && <span className="text-xs font-semibold truncate flex-1">{title}</span>}
       {sidebarOpen && active && <ChevronRight className="w-3 h-3 ml-auto text-white/70 shrink-0" />}
     </button>
   );
 }
 
-// ─── Group node (collapsible) ─────────────────────────────────────────────────
-
-function NavGroup({
-  item, role, view, depth, sidebarOpen,
-}: {
-  item: GroupItem; role: string; view: View; depth: number; sidebarOpen: boolean;
+// ─── Parent module group ──────────────────────────────────────────────────────
+function ModuleGroup({ entry, view, setView, sidebarOpen }: {
+  entry: AccessEntry;
+  view: View;
+  setView: (v: View) => void;
+  sidebarOpen: boolean;
 }) {
   // Auto-open if any child is active
-  const hasActive = React.useMemo(() => checkActive(item, view), [item, view]);
-  const [open, setOpen] = React.useState(hasActive);
+  const hasActiveChild = entry.functionalities.some(funcTitle => {
+    const path = `/${entry.access_to.toLowerCase().replace(/\s+/g, "-")}/${funcTitle.toLowerCase().replace(/\s+/g, "-")}`;
+    return PATH_TO_VIEW[path] === view;
+  });
 
-  // Re-open when active child changes
-  React.useEffect(() => { if (hasActive) setOpen(true); }, [hasActive]);
-
-  const indent = depth === 0 ? "pl-3" : depth === 1 ? "pl-7" : "pl-11";
-  const visibleChildren = item.children.filter(c => isVisible(c, role));
-  if (visibleChildren.length === 0) return null;
+  const [open, setOpen] = React.useState(hasActiveChild);
+  const hasChildren = entry.functionalities.length > 0;
+  const icon = MODULE_ICONS[entry.access_to];
 
   return (
     <div>
       <button
-        onClick={() => sidebarOpen && setOpen(o => !o)}
-        className={`w-full flex items-center gap-2.5 ${indent} pr-3 py-2 rounded-xl text-left transition-all group ${
-          hasActive && !open
-            ? "bg-white/10 text-white"
-            : "text-white/60 hover:bg-white/10 hover:text-white"
-        }`}
+        onClick={() => sidebarOpen && hasChildren && setOpen((o: boolean) => !o)}
+        className="w-full flex items-center gap-2.5 pl-3 pr-3 py-2 rounded-xl text-left transition-all group text-white/60 hover:bg-white/10 hover:text-white"
       >
-        <span className="shrink-0 text-white/50 group-hover:text-white">{item.icon}</span>
+        <span className="shrink-0 text-white/50 group-hover:text-white">
+          {icon ?? (
+            <span className="w-4 h-4 flex items-center justify-center text-[10px] font-black opacity-70">
+              {entry.access_to.slice(0, 2).toUpperCase()}
+            </span>
+          )}
+        </span>
         {sidebarOpen && (
           <>
-            <span className="text-xs font-semibold truncate flex-1">{item.label}</span>
-            <span className="shrink-0 text-white/40">
-              {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-            </span>
+            <span className="text-xs font-semibold truncate flex-1">{entry.access_to}</span>
+            {hasChildren && (
+              <span className="shrink-0 text-white/40">
+                {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              </span>
+            )}
           </>
         )}
       </button>
 
-      {sidebarOpen && open && (
-        <div className="mt-0.5 space-y-0.5">
-          {/* Indent line */}
-          <div className="relative">
-            <div className={`absolute top-0 bottom-0 w-px bg-white/10 ${depth === 0 ? "left-[22px]" : "left-[36px]"}`} />
-            <div className="space-y-0.5">
-              {visibleChildren.map((child, i) =>
-                child.type === "leaf"
-                  ? <React.Fragment key={i}><NavLeaf item={child} view={view} depth={depth + 1} sidebarOpen={sidebarOpen} /></React.Fragment>
-                  : <React.Fragment key={i}><NavGroup item={child} role={role} view={view} depth={depth + 1} sidebarOpen={sidebarOpen} /></React.Fragment>
-              )}
-            </div>
+      {sidebarOpen && open && hasChildren && (
+        <div className="mt-0.5 space-y-0.5 relative">
+          <div className="absolute top-0 bottom-0 w-px bg-white/10 left-[22px]" />
+          <div className="space-y-0.5">
+            {entry.functionalities.map((funcTitle, i) => {
+              const path = `/${entry.access_to.toLowerCase().replace(/\s+/g, "-")}/${funcTitle.toLowerCase().replace(/\s+/g, "-")}`;
+              return (
+                <ChildLink
+                  key={i}
+                  title={funcTitle}
+                  path={path}
+                  view={view}
+                  setView={setView}
+                  sidebarOpen={sidebarOpen}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -284,33 +153,53 @@ function NavGroup({
   );
 }
 
-function checkActive(item: GroupItem, view: View): boolean {
-  return item.children.some(c => {
-    if (c.type === "leaf") return !!c.view && c.view === view;
-    return checkActive(c, view);
-  });
+// ─── Settings leaf (admin only) ───────────────────────────────────────────────
+function SettingsLeaf({ view, setView, sidebarOpen }: {
+  view: View; setView: (v: View) => void; sidebarOpen: boolean;
+}) {
+  const active = view === "settings";
+  return (
+    <button
+      onClick={() => setView("settings")}
+      className={`w-full flex items-center gap-2.5 pl-3 pr-3 py-2 rounded-xl text-left transition-all group ${
+        active
+          ? "bg-[#25a872] text-white shadow-md shadow-[#25a872]/30"
+          : "text-white/60 hover:bg-white/10 hover:text-white"
+      }`}
+    >
+      <span className={`shrink-0 ${active ? "text-white" : "text-white/50 group-hover:text-white"}`}>
+        <Settings className="w-4 h-4" />
+      </span>
+      {sidebarOpen && <span className="text-xs font-semibold truncate flex-1">Settings</span>}
+      {sidebarOpen && active && <ChevronRight className="w-3 h-3 ml-auto text-white/70 shrink-0" />}
+    </button>
+  );
 }
 
 // ─── Main SidebarNav ──────────────────────────────────────────────────────────
-
-interface SidebarNavProps {
-  role: string;
-  view: View;
-  setView: (v: View) => void;
-  sidebarOpen: boolean;
-}
-
-export default function SidebarNav({ role, view, setView, sidebarOpen }: SidebarNavProps) {
-  const tree = React.useMemo(() => buildNavTree(role, view, setView), [role, view, setView]);
-  const visible = tree.filter(item => isVisible(item, role));
-
+export default function SidebarNav({ role, access, view, setView, sidebarOpen }: SidebarNavProps) {
   return (
     <ScrollArea className="flex-1 px-2 py-2 scrollbar-thin">
       <nav className="space-y-0.5">
-        {visible.map((item, i) =>
-          item.type === "leaf"
-            ? <React.Fragment key={i}><NavLeaf item={item} view={view} depth={0} sidebarOpen={sidebarOpen} /></React.Fragment>
-            : <React.Fragment key={i}><NavGroup item={item} role={role} view={view} depth={0} sidebarOpen={sidebarOpen} /></React.Fragment>
+        {/* Empty state */}
+        {access.length === 0 && role !== "admin" && sidebarOpen && (
+          <p className="text-[10px] text-white/30 px-3 py-2 italic">No modules assigned</p>
+        )}
+
+        {/* Render modules from user.access */}
+        {access.map((entry, i) => (
+          <ModuleGroup
+            key={i}
+            entry={entry}
+            view={view}
+            setView={setView}
+            sidebarOpen={sidebarOpen}
+          />
+        ))}
+
+        {/* Admin always sees Settings */}
+        {role === "admin" && (
+          <SettingsLeaf view={view} setView={setView} sidebarOpen={sidebarOpen} />
         )}
       </nav>
     </ScrollArea>

@@ -26,7 +26,7 @@ import ReportPreview from "./ReportPreview";
 import ZonalReview from "./ZonalReview";
 import ZonalCompose from "./ZonalCompose";
 import DGCEOPanel from "./DGCEOPanel";
-import SDOHub from "./SDOHub";
+import SDOPerformance from "./SDOPerformance";
 import AnnualReportForm from "./AnnualReportForm";
 import AnnualReportsList from "./AnnualReportsList";
 import AnnualReportDetail from "./AnnualReportDetail";
@@ -43,13 +43,13 @@ import MonthlyReportsList from "./monthly/MonthlyReportsList";
 import DeptMonthlyPage from "./monthly/DeptMonthlyPage";
 import SidebarNav from "./SidebarNav";
 import AdminSettingsPage from "./admin/AdminSettingsPage";
-
-import { type UserContext } from "@/src/App";
+import ZonalDirectorDashboard from "./ZonalDirectorDashboard";
+import StateOfficeDashboard from "./StateOfficeDashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-director" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
-type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "stock-verification" | "stock-verifications-list" | "stock-assets" | "settings" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list";
-interface DashboardProps { userCtx: UserContext; onLogout: () => void; }
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verification" | "stock-verifications-list" | "stock-assets";
+interface DashboardProps { role: Role; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const CHART_DATA = [
@@ -384,9 +384,8 @@ function AuditPanel() {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-export default function Dashboard({ userCtx, onLogout }: DashboardProps) {
-  const role = userCtx.role;
-  const [view, setView] = React.useState<View>("home");
+export default function Dashboard({ role, access = [], functionalities = "", onLogout }: DashboardProps) {
+  const [view, setView] = React.useState<View>(role === "admin" ? "home" : "home");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [selectedReportRef, setSelectedReportRef] = React.useState<string | null>(null);
   const [selectedVerifId, setSelectedVerifId] = React.useState<number | null>(null);
@@ -427,7 +426,7 @@ export default function Dashboard({ userCtx, onLogout }: DashboardProps) {
         )}
 
         {/* Nav */}
-        <SidebarNav role={role} view={view} setView={setView} sidebarOpen={sidebarOpen} />
+        <SidebarNav role={role} access={access} view={view} setView={(v) => setView(v as View)} sidebarOpen={sidebarOpen} />
 
         {/* Logout */}
         <div className="p-3 border-t border-white/10">
@@ -460,7 +459,7 @@ export default function Dashboard({ userCtx, onLogout }: DashboardProps) {
               <p className="text-sm font-bold text-slate-800 leading-tight">
                 {view === "home" ? "Dashboard Overview" : view === "report-entry" ? "Submit Report" : view === "zonal-review" ? "Review Reports" : "Dashboard"}
               </p>
-              <p className="text-[10px] text-slate-400">NHIA Underwriting & Risk Management System</p>
+              <p className="text-[10px] text-slate-400">NHIA Reporting Management Dashboard</p>
             </div>
           </div>
 
@@ -521,7 +520,7 @@ export default function Dashboard({ userCtx, onLogout }: DashboardProps) {
                     <h1 className="text-xl font-black text-slate-900 tracking-tight">
                       Good morning, {userInfo.initials} 👋
                     </h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Here's your NHIA URMS overview for today.</p>
+                    <p className="text-sm text-slate-500 mt-0.5">Here's your NHIA Reporting Management Dashboard overview for today.</p>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" className="h-9 text-xs rounded-xl border-[#d4e8dc] hover:bg-[#e8f5ee] gap-1.5">
@@ -535,15 +534,42 @@ export default function Dashboard({ userCtx, onLogout }: DashboardProps) {
                   </div>
                 </div>
 
-                {/* KPI row */}
+                {/* KPI row — hidden for SDO, Zonal Director, and State Officer (have their own KPIs) */}
+                {role !== "sdo" && role !== "zonal-director" && role !== "state-officer" && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <KPICard title="Reports Submitted" value="124" trend="+12%" trendUp icon={<FileText className="w-5 h-5 text-blue-600" />} tint="kpi-blue" sub="This month" />
                   <KPICard title="Pending Review"    value="18"  trend="-5%"  icon={<Clock className="w-5 h-5 text-amber-600" />}  tint="kpi-amber" sub="Awaiting action" />
                   <KPICard title="Open Directives"   value="06"  trend="+2"   trendUp icon={<Compass className="w-5 h-5 text-[#145c3f]" />} tint="kpi-green" sub="Active tasks" />
                   <KPICard title="Compliance Rate"   value="98.2%" trend="+0.4%" trendUp icon={<CheckSquare className="w-5 h-5 text-purple-600" />} tint="kpi-purple" sub="National average" />
                 </div>
+                )}
 
                 {/* Main grid */}
+                {role === "sdo" ? (
+                  /* SDO: full-width performance dashboard */
+                  <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                    <SDOPerformance />
+                  </motion.div>
+                ) : role === "zonal-director" ? (
+                  /* Zonal Director: zone + state drill-down dashboard */
+                  <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                    <ZonalDirectorDashboard
+                      zoneName="South West"
+                      onReviewReports={() => setView("zonal-review")}
+                    />
+                  </motion.div>
+                ) : role === "state-officer" ? (
+                  /* State Officer: state performance + department drill-down */
+                  <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                    <StateOfficeDashboard
+                      stateName="Lagos"
+                      zoneName="South West"
+                      onNewReport={() => setView("report-entry")}
+                      onAnnualReport={() => setView("annual-report")}
+                      onViewSubmissions={() => setView("annual-reports-list")}
+                    />
+                  </motion.div>
+                ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                   <div className="xl:col-span-2 space-y-6">
                     {/* Chart */}
@@ -596,10 +622,7 @@ export default function Dashboard({ userCtx, onLogout }: DashboardProps) {
 
                     {/* Role panel */}
                     <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                      {role === "state-officer"  && <StateOfficerPanel onNewReport={() => setView("report-entry")} onAnnualReport={() => setView("annual-report")} onViewSubmissions={() => setView("annual-reports-list")} />}
-                      {role === "zonal-director" && <ZonalDirectorPanel onReviewReports={() => setView("zonal-review")} />}
                       {role === "dg-ceo"         && <DGCEOPanel />}
-                      {role === "sdo"            && <SDOHub />}
                       {role === "hq-department"  && <HQPanel />}
                       {role === "audit"          && <AuditPanel />}
                     </motion.div>
@@ -698,6 +721,7 @@ export default function Dashboard({ userCtx, onLogout }: DashboardProps) {
                     </Card>
                   </div>
                 </div>
+                )} {/* end role !== "sdo" ternary */}
               </motion.div>
             ) : view === "report-entry" ? (
               <ReportEntry onBack={() => setView("home")} onPreview={() => setView("report-preview")} />

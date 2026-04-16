@@ -31,7 +31,8 @@ const getStates = async (req, res, next) => {
 
 const getDepartments = async (req, res, next) => {
   try {
-    const where = req.query.state_id ? { state_id: req.query.state_id } : {};
+    // Departments are global — not scoped to a state. Ignore state_id filter.
+    const where = req.query.department_id ? { id: req.query.department_id } : {};
     const depts = await Department.findAll({ where, order: [["name", "ASC"]] });
     res.json({ success: true, data: depts });
   } catch (err) { next(err); }

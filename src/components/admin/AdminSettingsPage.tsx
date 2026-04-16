@@ -1,19 +1,21 @@
 import * as React from "react";
-import { Users, MapPin, Building2, Layers } from "lucide-react";
+import { Users, MapPin, Building2, Layers, ShieldCheck } from "lucide-react";
 import AdminUsersPage from "./AdminUsersPage";
 import AdminZonesPage from "./AdminZonesPage";
 import AdminStatesPage from "./AdminStatesPage";
 import AdminDepartmentsPage from "./AdminDepartmentsPage";
 import AdminUnitsPage from "./AdminUnitsPage";
+import AdminPrivilegesPage from "./AdminPrivilegesPage";
 
-type Tab = "users" | "zones" | "states" | "departments" | "units";
+type Tab = "users" | "zones" | "states" | "departments" | "units" | "privileges";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: "users",       label: "Users",         icon: <Users className="w-3.5 h-3.5" />     },
-  { id: "zones",       label: "Zonal Offices", icon: <MapPin className="w-3.5 h-3.5" />    },
-  { id: "states",      label: "State Offices", icon: <Building2 className="w-3.5 h-3.5" /> },
-  { id: "departments", label: "Departments",   icon: <Layers className="w-3.5 h-3.5" />    },
-  { id: "units",       label: "Units",         icon: <Layers className="w-3.5 h-3.5" />    },
+  { id: "users",       label: "Users",         icon: <Users className="w-3.5 h-3.5" />       },
+  { id: "privileges",  label: "Privileges",    icon: <ShieldCheck className="w-3.5 h-3.5" /> },
+  { id: "zones",       label: "Zonal Offices", icon: <MapPin className="w-3.5 h-3.5" />      },
+  { id: "states",      label: "State Offices", icon: <Building2 className="w-3.5 h-3.5" />   },
+  { id: "departments", label: "Departments",   icon: <Layers className="w-3.5 h-3.5" />      },
+  { id: "units",       label: "Units",         icon: <Layers className="w-3.5 h-3.5" />      },
 ];
 
 export default function AdminSettingsPage() {
@@ -45,6 +47,7 @@ export default function AdminSettingsPage() {
 
       <div>
         {tab === "users"       && <AdminUsersPage showOverview />}
+        {tab === "privileges"  && <AdminPrivilegesPage />}
         {tab === "zones"       && <AdminZonesPage />}
         {tab === "states"      && <AdminStatesPage />}
         {tab === "departments" && <AdminDepartmentsPage />}
