@@ -117,23 +117,28 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-wrap gap-3 items-center">
                 <Select value={dept} onValueChange={v => setDept(v as MonthlyDept)}>
-                  <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-[160px]"
+                    displayValue={DEPT_OPTIONS.find(d => d.value === dept)?.label ?? dept}>
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
                   <SelectContent>
                     {DEPT_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filterYear} onValueChange={setFilterYear}>
-                  <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-[120px]"
+                    displayValue={filterYear === "all" ? "All Years" : filterYear}>
+                    <SelectValue placeholder="All Years" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Years</SelectItem>
                     {YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filterMonth} onValueChange={setFilterMonth}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="All Months">
-                      {filterMonth === "all" ? "All Months" : MONTHS.find(m => m.v === filterMonth)?.l}
-                    </SelectValue>
+                  <SelectTrigger className="w-[140px]"
+                    displayValue={filterMonth === "all" ? "All Months" : (MONTHS.find(m => m.v === filterMonth)?.l ?? filterMonth)}>
+                    <SelectValue placeholder="All Months" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Months</SelectItem>
@@ -141,7 +146,10 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[140px]"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                  <SelectTrigger className="w-[140px]"
+                    displayValue={filterStatus === "all" ? "All Statuses" : filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)}>
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
