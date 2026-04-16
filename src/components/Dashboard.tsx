@@ -524,20 +524,10 @@ export default function Dashboard({ role, access = [], functionalities = "", onL
                     </h1>
                     <p className="text-sm text-slate-500 mt-0.5">Here's your NHIA Reporting Management Dashboard overview for today.</p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="h-9 text-xs rounded-xl border-[#d4e8dc] hover:bg-[#e8f5ee] gap-1.5">
-                      <BarChart3 className="w-3.5 h-3.5" /> Reports
-                    </Button>
-                    <Button onClick={() => setView("report-entry")}
-                      className="h-9 text-xs rounded-xl bg-[#145c3f] hover:bg-[#0f3d2e] text-white gap-1.5 shadow-md shadow-[#145c3f]/20"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> New Submission
-                    </Button>
-                  </div>
                 </div>
 
-                {/* KPI row — hidden for SDO, Zonal Director, and State Officer (have their own KPIs) */}
-                {role !== "sdo" && role !== "zonal-director" && role !== "state-officer" && (
+                {/* KPI row — hidden for SDO, Zonal Coordinator, and State Officer (have their own KPIs) */}
+                {role !== "sdo" && role !== "zonal-coordinator" && role !== "state-officer" && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <KPICard title="Reports Submitted" value="124" trend="+12%" trendUp icon={<FileText className="w-5 h-5 text-blue-600" />} tint="kpi-blue" sub="This month" />
                   <KPICard title="Pending Review"    value="18"  trend="-5%"  icon={<Clock className="w-5 h-5 text-amber-600" />}  tint="kpi-amber" sub="Awaiting action" />
@@ -552,8 +542,8 @@ export default function Dashboard({ role, access = [], functionalities = "", onL
                   <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                     <SDOPerformance />
                   </motion.div>
-                ) : role === "zonal-director" ? (
-                  /* Zonal Director: zone + state drill-down dashboard */
+                ) : role === "zonal-coordinator" ? (
+                  /* Zonal Coordinator: same zone + state drill-down dashboard as Zonal Director */
                   <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                     <ZonalDirectorDashboard
                       zoneName="South West"
@@ -624,8 +614,6 @@ export default function Dashboard({ role, access = [], functionalities = "", onL
 
                     {/* Role panel */}
                     <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                      {role === "state-officer"     && <StateOfficerPanel onNewReport={() => setView("report-entry")} onAnnualReport={() => setView("annual-report")} onViewSubmissions={() => setView("annual-reports-list")} />}
-                      {role === "zonal-coordinator" && <ZonalDirectorPanel onReviewReports={() => setView("zonal-review")} />}
                       {role === "state-coordinator" && <StateOfficerPanel onNewReport={() => setView("report-entry")} onAnnualReport={() => setView("annual-report")} onViewSubmissions={() => setView("annual-reports-list")} />}
                       {role === "dg-ceo"         && <DGCEOPanel />}
                       {role === "hq-department"  && <HQPanel />}
