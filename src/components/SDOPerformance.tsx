@@ -20,6 +20,8 @@ const ZONE_COLORS: Record<string, string> = {
   "South East":   "#34d399",
 };
 
+const ZONES = Object.keys(ZONE_COLORS);
+
 // ─── 2023 quarterly data ──────────────────────────────────────────────────────
 const Q2023 = [
   { state:"Ondo",        zone:"South West",    gifQ1:111,  gifQ2:81,   gifQ3:177,  gifQ4:151,  igrQ1:2183000,   igrQ2:2942500,   igrQ3:5031500,   igrQ4:3170500,   bhcpfQ1:126,  bhcpfQ2:165,  bhcpfQ3:148,  bhcpfQ4:130,  cmpQ1:0,  cmpQ2:0,  cmpQ3:0,  cmpQ4:47,   cemoncTotal:0,   ffpTotal:0,    fsshipTotal:0   },
@@ -121,7 +123,7 @@ const Q2025 = [
   { state:"Katsina",     zone:"North West",    gifQ1:7,    gifQ2:107,  gifQ3:3,    gifQ4:39,   igrQ1:1239500,   igrQ2:266000,    igrQ3:5041134,   igrQ4:1324642,   bhcpfQ1:143,  bhcpfQ2:101,  bhcpfQ3:146,  bhcpfQ4:184,  cmpQ1:22,  cmpQ2:0,  cmpQ3:0,  cmpQ4:0,   cemoncTotal:1227, ffpTotal:156,   fsshipTotal:957  },
   { state:"Kano",        zone:"North West",    gifQ1:187,  gifQ2:215,  gifQ3:137,  gifQ4:611,  igrQ1:583500,    igrQ2:408500,    igrQ3:3437000,   igrQ4:4624500,   bhcpfQ1:258,  bhcpfQ2:212,  bhcpfQ3:560,  bhcpfQ4:731,  cmpQ1:61,  cmpQ2:0,  cmpQ3:0,  cmpQ4:0,   cemoncTotal:4425, ffpTotal:1150,  fsshipTotal:1966 },
   { state:"Kwara",       zone:"North Central", gifQ1:334,  gifQ2:261,  gifQ3:187,  gifQ4:673,  igrQ1:276500,    igrQ2:81500,     igrQ3:745000,    igrQ4:988000,    bhcpfQ1:214,  bhcpfQ2:220,  bhcpfQ3:299,  bhcpfQ4:319,  cmpQ1:36,  cmpQ2:0,  cmpQ3:0,  cmpQ4:0,   cemoncTotal:302,  ffpTotal:1455,  fsshipTotal:915  },
-  { state:"Kogi",        zone:"North Central", gifQ1:31,   gifQ2:60,   gifQ3:27,   gifQ4:57,   igrQ1:74100,     igrQ2:218700,    igrQ3:816550,    igrQ4:875000,    bhcpfQ1:546,  bhcpfQ2:297,  bhcpfQ3:216,  bhcpfQ4:192,  cmpQ1:53,  cmpQ2:0,  cmpQ3:0,  cmpQ4:0,   cemoncTotal:89,   ffpTotal:175,   fsshipTotal:379  },
+  { state:"Kogi",        zone:"North Central", gifQ1:31,   gifQ2:60,   gifQ3:27,   gifQ4:57,   igrQ1:74100,     igrQ2:218700,    igrQ3:816550,    igrQ4:875000,    bhcpfQ1:546,  bhcpfQ2:297,  bhcpfQ3:216,  bhcpfQ4:192,  cmpQ1:53,  cmpQ2:0,  cmpQ3:0,  cmpQ4:0,   cemoncTotal:0,    ffpTotal:0,     fsshipTotal:0    },
   { state:"Niger",       zone:"North Central", gifQ1:0,    gifQ2:29,   gifQ3:90,   gifQ4:34,   igrQ1:143500,    igrQ2:75000,     igrQ3:207000,    igrQ4:129000,    bhcpfQ1:113,  bhcpfQ2:209,  bhcpfQ3:181,  bhcpfQ4:217,  cmpQ1:43,  cmpQ2:0,  cmpQ3:0,  cmpQ4:0,   cemoncTotal:0,    ffpTotal:153,   fsshipTotal:567  },
   { state:"Anambra",     zone:"South East",    gifQ1:56,   gifQ2:79,   gifQ3:632,  gifQ4:327,  igrQ1:552000,    igrQ2:151000,    igrQ3:903000,    igrQ4:479000,    bhcpfQ1:259,  bhcpfQ2:133,  bhcpfQ3:157,  bhcpfQ4:248,  cmpQ1:115, cmpQ2:0,  cmpQ3:0,  cmpQ4:0,   cemoncTotal:681,  ffpTotal:1094,  fsshipTotal:339  },
   { state:"Ebonyi",      zone:"South East",    gifQ1:51,   gifQ2:67,   gifQ3:235,  gifQ4:17468,igrQ1:441000,    igrQ2:63500,     igrQ3:494245,    igrQ4:466191,    bhcpfQ1:241,  bhcpfQ2:249,  bhcpfQ3:270,  bhcpfQ4:255,  cmpQ1:83,  cmpQ2:0,  cmpQ3:0,  cmpQ4:0,   cemoncTotal:3417, ffpTotal:17821, fsshipTotal:628  },
@@ -240,10 +242,9 @@ function DonutCenter({ cx, cy, total }: { cx?: number; cy?: number; total: strin
   );
 }
 
-// ─── Drill-down modal ─────────────────────────────────────────────────────────
-type DrillLevel = "quarterly" | "state";
-
-const KPI_DRILL_CONFIG: Record<string, {
+// ─── KPI Drill Config ─────────────────────────────────────────────────────────
+// Quarterly metrics: GIFSHIP, IGR, BHCPF, Complaints
+const KPI_QUARTERLY_CONFIG: Record<string, {
   qFields: [string,string,string,string];
   label: string;
   fmt: (v: number) => string;
@@ -255,10 +256,49 @@ const KPI_DRILL_CONFIG: Record<string, {
   "Total Complaints":   { qFields:["cmpQ1","cmpQ2","cmpQ3","cmpQ4"], label:"Complaints",          fmt:(v)=>v.toLocaleString(), color:"#f59e0b" },
 };
 
-function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: typeof Q2023; onClose: () => void }) {
-  const [level, setLevel]     = React.useState<DrillLevel>("quarterly");
-  const [activeQ, setActiveQ] = React.useState<string>("Q1");
-  const cfg = KPI_DRILL_CONFIG[kpiLabel];
+// Annual-only metrics: CEmONC, FFP, FSSHIP
+const KPI_ANNUAL_CONFIG: Record<string, {
+  field: string;
+  label: string;
+  fmt: (v: number) => string;
+  color: string;
+}> = {
+  "CEmONC Beneficiaries": { field:"cemonc",  label:"CEmONC Beneficiaries", fmt:(v)=>v.toLocaleString(), color:"#3b82f6" },
+  "FFP Beneficiaries":    { field:"ffp",     label:"FFP Beneficiaries",    fmt:(v)=>v.toLocaleString(), color:"#a78bfa" },
+  "FSSHIP Enrolments":    { field:"fsship",  label:"FSSHIP Enrolments",    fmt:(v)=>v.toLocaleString(), color:"#f97316" },
+};
+
+// Combined lookup for "is this KPI drillable?"
+const ALL_DRILL_LABELS = new Set([
+  ...Object.keys(KPI_QUARTERLY_CONFIG),
+  ...Object.keys(KPI_ANNUAL_CONFIG),
+]);
+
+// ─── Pill tabs helper ─────────────────────────────────────────────────────────
+function PillTabs({ options, active, onChange }: { options: string[]; active: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center gap-1 p-1 rounded-xl bg-[#e8f5ee] border border-[#d4e8dc] w-fit flex-wrap">
+      {options.map(o => (
+        <button key={o} onClick={() => onChange(o)}
+          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            active === o ? "bg-[#145c3f] text-white shadow-sm" : "text-[#5a7a6a] hover:text-[#145c3f]"
+          }`}
+        >{o}</button>
+      ))}
+    </div>
+  );
+}
+
+// ─── QuarterlyDrillModal ──────────────────────────────────────────────────────
+// Flow: Quarterly → Zonal → State
+type QDrillLevel = "quarterly" | "zonal" | "state";
+
+function QuarterlyDrillModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: typeof Q2023; onClose: () => void }) {
+  const [level, setLevel]       = React.useState<QDrillLevel>("quarterly");
+  const [activeQ, setActiveQ]   = React.useState("Q1");
+  const [activeZone, setActiveZone] = React.useState(ZONES[0]);
+
+  const cfg = KPI_QUARTERLY_CONFIG[kpiLabel];
   if (!cfg) return null;
 
   const isIGR = kpiLabel === "Total IGR (₦)";
@@ -272,59 +312,81 @@ function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: t
   });
   const annualTotal = quarterlyTotals.reduce((s, q) => s + q.value, 0);
 
-  // ── State breakdown for active quarter tab ──
-  const getStateBreakdown = (q: string) => {
+  // ── Zonal totals for active quarter ──
+  const getZonalBreakdown = (q: string) => {
+    const qi = QUARTERS.indexOf(q);
+    const field = cfg.qFields[qi] as keyof typeof data[0];
+    const zoneMap: Record<string, number> = {};
+    data.forEach(r => {
+      zoneMap[r.zone] = (zoneMap[r.zone] || 0) + (Number(r[field]) || 0);
+    });
+    return ZONES.map(zone => ({ zone, value: zoneMap[zone] || 0 }))
+      .sort((a, b) => b.value - a.value);
+  };
+
+  // ── State breakdown for active quarter + zone ──
+  const getStateBreakdown = (q: string, zone: string) => {
     const qi = QUARTERS.indexOf(q);
     const field = cfg.qFields[qi] as keyof typeof data[0];
     return data
-      .map(r => ({ state: r.state, zone: r.zone, value: Number(r[field]) || 0,
-        // all 4 quarters for this state
+      .filter(r => r.zone === zone)
+      .map(r => ({
+        state: r.state, zone: r.zone,
+        value: Number(r[field]) || 0,
         q1: Number(r[cfg.qFields[0] as keyof typeof data[0]]) || 0,
         q2: Number(r[cfg.qFields[1] as keyof typeof data[0]]) || 0,
         q3: Number(r[cfg.qFields[2] as keyof typeof data[0]]) || 0,
         q4: Number(r[cfg.qFields[3] as keyof typeof data[0]]) || 0,
       }))
-      .filter(r => r.q1+r.q2+r.q3+r.q4 > 0)
       .sort((a, b) => b.value - a.value);
   };
 
-  const stateBreakdown = getStateBreakdown(activeQ);
-  const qTotal = stateBreakdown.reduce((s, r) => s + r.value, 0);
-  const maxVal  = stateBreakdown[0]?.value || 1;
+  const zonalBreakdown = getZonalBreakdown(activeQ);
+  const stateBreakdown = getStateBreakdown(activeQ, activeZone);
+  const qTotal = zonalBreakdown.reduce((s, z) => s + z.value, 0);
+  const stateMaxVal = stateBreakdown[0]?.value || 1;
+
+  const breadcrumb = (
+    <div className="flex items-center gap-1.5 text-[10px] text-[#5a7a6a] mt-0.5 flex-wrap">
+      <button onClick={() => setLevel("quarterly")}
+        className={`font-bold transition-colors ${level==="quarterly"?"text-[#145c3f]":"hover:text-[#145c3f]"}`}>
+        Quarterly
+      </button>
+      {(level === "zonal" || level === "state") && (
+        <><ChevronRight className="w-3 h-3"/>
+        <button onClick={() => setLevel("zonal")}
+          className={`font-bold transition-colors ${level==="zonal"?"text-[#145c3f]":"hover:text-[#145c3f]"}`}>
+          {activeQ} — Zones
+        </button></>
+      )}
+      {level === "state" && (
+        <><ChevronRight className="w-3 h-3"/>
+        <span className="font-bold text-[#145c3f]">{activeZone}</span></>
+      )}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Panel — fixed height with internal scroll */}
       <motion.div initial={{ opacity:0, scale:0.96, y:16 }} animate={{ opacity:1, scale:1, y:0 }}
         exit={{ opacity:0, scale:0.96, y:16 }} transition={{ duration:0.2 }}
         className="relative z-10 w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-[#d4e8dc] flex flex-col"
         style={{ maxHeight: "88vh" }}
       >
-        {/* ── Header (sticky) ── */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#d4e8dc] bg-[#f0fdf7] rounded-t-3xl shrink-0">
           <div className="flex items-center gap-3">
-            {level === "state" && (
-              <button onClick={() => setLevel("quarterly")}
+            {level !== "quarterly" && (
+              <button onClick={() => setLevel(level === "state" ? "zonal" : "quarterly")}
                 className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#d4e8dc] transition-colors text-[#145c3f]">
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
             <div>
               <p className="text-sm font-black text-slate-900">{cfg.label} — Drill-Down</p>
-              <div className="flex items-center gap-1.5 text-[10px] text-[#5a7a6a] mt-0.5">
-                <button onClick={() => setLevel("quarterly")}
-                  className={`font-bold transition-colors ${level==="quarterly"?"text-[#145c3f]":"text-[#5a7a6a] hover:text-[#145c3f]"}`}>
-                  Quarterly Summary
-                </button>
-                {level === "state" && (
-                  <><ChevronRight className="w-3 h-3"/>
-                  <span className="font-bold text-[#145c3f]">State Breakdown — {activeQ}</span></>
-                )}
-              </div>
+              {breadcrumb}
             </div>
           </div>
           <button onClick={onClose}
@@ -333,23 +395,20 @@ function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: t
           </button>
         </div>
 
-        {/* ── Scrollable body ── */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="p-6 space-y-5">
 
             {/* ════ QUARTERLY LEVEL ════ */}
             {level === "quarterly" && (
               <>
-                {/* Annual banner */}
                 <div className="flex items-center justify-between p-4 rounded-2xl border border-[#d4e8dc] bg-[#f0fdf7]">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Annual Total</p>
                     <p className="text-2xl font-black text-slate-900 mt-0.5">{cfg.fmt(annualTotal)}</p>
                   </div>
-                  <p className="text-[10px] font-bold text-[#145c3f]">Click a quarter to drill into states →</p>
+                  <p className="text-[10px] font-bold text-[#145c3f]">Click a quarter → zone breakdown →</p>
                 </div>
-
-                {/* Bar chart */}
                 <div className="h-52">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={quarterlyTotals} barSize={44}>
@@ -360,20 +419,18 @@ function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: t
                       <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }}
                         formatter={(v:number) => [cfg.fmt(v), cfg.label]} />
                       <Bar dataKey="value" radius={[8,8,0,0]} cursor="pointer"
-                        onClick={(d: any) => { setActiveQ(d.quarter); setLevel("state"); }}>
+                        onClick={(d: any) => { setActiveQ(d.quarter); setLevel("zonal"); }}>
                         {quarterlyTotals.map(q => <Cell key={q.quarter} fill={cfg.color} fillOpacity={0.85} />)}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-
-                {/* Quarter cards */}
                 <div className="grid grid-cols-4 gap-3">
                   {quarterlyTotals.map(q => {
                     const pct = annualTotal > 0 ? Math.round((q.value/annualTotal)*100) : 0;
                     return (
                       <button key={q.quarter}
-                        onClick={() => { setActiveQ(q.quarter); setLevel("state"); }}
+                        onClick={() => { setActiveQ(q.quarter); setLevel("zonal"); }}
                         className="p-4 rounded-2xl border border-[#d4e8dc] bg-white hover:border-[#25a872] hover:shadow-md hover:-translate-y-0.5 transition-all text-left group"
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -385,6 +442,64 @@ function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: t
                           <div className="h-full rounded-full" style={{ width:`${pct}%`, backgroundColor:cfg.color }} />
                         </div>
                         <p className="text-[10px] text-[#25a872] font-semibold mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          View zones <ChevronRight className="w-3 h-3" />
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* ════ ZONAL LEVEL ════ */}
+            {level === "zonal" && (
+              <>
+                <PillTabs options={QUARTERS} active={activeQ} onChange={q => setActiveQ(q)} />
+                <div className="flex items-center justify-between p-4 rounded-2xl border border-[#d4e8dc] bg-[#f0fdf7]">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">{activeQ} — Zone Breakdown</p>
+                    <p className="text-2xl font-black text-slate-900 mt-0.5">{cfg.fmt(qTotal)}</p>
+                  </div>
+                  <p className="text-[10px] font-bold text-[#145c3f]">Click a zone → state breakdown →</p>
+                </div>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={zonalBreakdown} barSize={36}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8f5ee" />
+                      <XAxis dataKey="zone" tick={{ fontSize:9, fill:"#5a7a6a", fontWeight:700 }} axisLine={false} tickLine={false}
+                        tickFormatter={z => z.split(" ")[0] + " " + z.split(" ")[1]} />
+                      <YAxis tick={{ fontSize:10, fill:"#5a7a6a" }} axisLine={false} tickLine={false}
+                        tickFormatter={v => isIGR ? `₦${(v/1000000).toFixed(0)}M` : v.toLocaleString()} />
+                      <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }}
+                        formatter={(v:number) => [cfg.fmt(v), cfg.label]} />
+                      <Bar dataKey="value" radius={[8,8,0,0]} cursor="pointer"
+                        onClick={(d: any) => { setActiveZone(d.zone); setLevel("state"); }}>
+                        {zonalBreakdown.map(z => <Cell key={z.zone} fill={ZONE_COLORS[z.zone]||cfg.color} fillOpacity={0.85} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {zonalBreakdown.map(z => {
+                    const pct = qTotal > 0 ? Math.round((z.value/qTotal)*100) : 0;
+                    const col = ZONE_COLORS[z.zone] || cfg.color;
+                    return (
+                      <button key={z.zone}
+                        onClick={() => { setActiveZone(z.zone); setLevel("state"); }}
+                        className="p-4 rounded-2xl border bg-white hover:shadow-md hover:-translate-y-0.5 transition-all text-left group"
+                        style={{ borderColor: col + "40" }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-bold text-[#5a7a6a] leading-tight">{z.zone}</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ backgroundColor: col+"18", color: col }}>{pct}%</span>
+                        </div>
+                        <p className="text-base font-black text-slate-900">{cfg.fmt(z.value)}</p>
+                        <div className="mt-2 h-1 rounded-full bg-[#e8f5ee] overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width:`${pct}%`, backgroundColor:col }} />
+                        </div>
+                        <p className="text-[10px] font-semibold mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ color: col }}>
                           View states <ChevronRight className="w-3 h-3" />
                         </p>
                       </button>
@@ -394,38 +509,28 @@ function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: t
               </>
             )}
 
-            {/* ════ STATE BREAKDOWN LEVEL ════ */}
+            {/* ════ STATE LEVEL ════ */}
             {level === "state" && (
               <>
-                {/* Quarter tabs */}
-                <div className="flex items-center gap-1 p-1 rounded-xl bg-[#e8f5ee] border border-[#d4e8dc] w-fit">
-                  {QUARTERS.map(q => (
-                    <button key={q} onClick={() => setActiveQ(q)}
-                      className={`px-5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                        activeQ === q
-                          ? "bg-[#145c3f] text-white shadow-sm"
-                          : "text-[#5a7a6a] hover:text-[#145c3f]"
-                      }`}
-                    >{q}</button>
-                  ))}
+                <div className="flex flex-wrap gap-3">
+                  <PillTabs options={QUARTERS} active={activeQ} onChange={q => setActiveQ(q)} />
+                  <PillTabs options={ZONES} active={activeZone} onChange={z => setActiveZone(z)} />
                 </div>
-
-                {/* Quarter summary banner */}
                 <div className="flex items-center justify-between p-4 rounded-2xl border border-[#d4e8dc] bg-[#f0fdf7]">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">{activeQ} — {cfg.label}</p>
-                    <p className="text-2xl font-black text-slate-900 mt-0.5">{cfg.fmt(qTotal)}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">{activeZone} — {activeQ}</p>
+                    <p className="text-2xl font-black text-slate-900 mt-0.5">
+                      {cfg.fmt(stateBreakdown.reduce((s,r)=>s+r.value,0))}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] text-[#5a7a6a]">{stateBreakdown.filter(s=>s.value>0).length} states reported</p>
                     <p className="text-[10px] font-bold text-[#145c3f] mt-0.5">Sorted by value ↓</p>
                   </div>
                 </div>
-
-                {/* Horizontal bar chart — top 15 */}
-                <div className="h-64">
+                <div className="h-52">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stateBreakdown.filter(s=>s.value>0).slice(0,15)} layout="vertical" barSize={10} margin={{ left:8, right:24 }}>
+                    <BarChart data={stateBreakdown} layout="vertical" barSize={10} margin={{ left:8, right:24 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8f5ee" />
                       <XAxis type="number" tick={{ fontSize:10, fill:"#5a7a6a" }} axisLine={false} tickLine={false}
                         tickFormatter={v => isIGR ? `₦${(v/1000000).toFixed(1)}M` : v.toLocaleString()} />
@@ -433,52 +538,38 @@ function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: t
                       <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }}
                         formatter={(v:number) => [cfg.fmt(v), `${activeQ} ${cfg.label}`]} />
                       <Bar dataKey="value" radius={[0,6,6,0]}>
-                        {stateBreakdown.slice(0,15).map(s => <Cell key={s.state} fill={ZONE_COLORS[s.zone]||cfg.color} fillOpacity={0.85} />)}
+                        {stateBreakdown.map(s => <Cell key={s.state} fill={ZONE_COLORS[s.zone]||cfg.color} fillOpacity={0.85} />)}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-
-                {/* Full scrollable state table */}
                 <div className="rounded-2xl border border-[#d4e8dc] overflow-hidden">
                   <div className="bg-[#f0fdf7] border-b border-[#d4e8dc] px-3 py-2 flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">All States — {activeQ}</p>
-                    <p className="text-[10px] text-[#5a7a6a]">{stateBreakdown.filter(s=>s.value>0).length} reporting</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">{activeZone} States — All Quarters</p>
+                    <p className="text-[10px] text-[#5a7a6a]">{stateBreakdown.length} states</p>
                   </div>
-                  {/* Scrollable table wrapper */}
                   <div className="overflow-y-auto" style={{ maxHeight: "280px" }}>
                     <table className="w-full text-xs">
                       <thead className="sticky top-0 bg-[#f0fdf7] border-b border-[#d4e8dc] z-10">
                         <tr>
                           <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">#</th>
                           <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">State</th>
-                          <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Zone</th>
                           <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Q1</th>
                           <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Q2</th>
                           <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Q3</th>
                           <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Q4</th>
-                          <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">{activeQ} Value</th>
                           <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Share</th>
                         </tr>
                       </thead>
                       <tbody>
                         {stateBreakdown.map((s, i) => {
-                          const share = qTotal > 0 ? Math.round((s.value/qTotal)*100) : 0;
+                          const zoneTotal = stateBreakdown.reduce((acc,r)=>acc+r.value,0);
+                          const share = zoneTotal > 0 ? Math.round((s.value/zoneTotal)*100) : 0;
                           const qVals = [s.q1, s.q2, s.q3, s.q4];
                           return (
-                            <tr key={s.state}
-                              className={`border-b border-[#e8f5ee] transition-colors hover:bg-[#f0fdf7] ${
-                                activeQ === "Q1" && s.value === stateBreakdown[0]?.value ? "bg-emerald-50/40" : ""
-                              }`}
-                            >
+                            <tr key={s.state} className="border-b border-[#e8f5ee] hover:bg-[#f0fdf7] transition-colors">
                               <td className="px-3 py-2 text-[#5a7a6a] font-bold">{i+1}</td>
                               <td className="px-3 py-2 font-bold text-slate-800 whitespace-nowrap">{s.state}</td>
-                              <td className="px-3 py-2">
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                  style={{ backgroundColor:(ZONE_COLORS[s.zone]||cfg.color)+"18", color:ZONE_COLORS[s.zone]||cfg.color }}>
-                                  {s.zone.split(" ")[0]}
-                                </span>
-                              </td>
                               {qVals.map((v, qi) => (
                                 <td key={qi} className={`px-3 py-2 font-mono text-[11px] ${
                                   QUARTERS[qi] === activeQ ? "font-black text-[#145c3f]" : "text-slate-500"
@@ -486,11 +577,10 @@ function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: t
                                   {v > 0 ? cfg.fmt(v) : <span className="text-slate-300">—</span>}
                                 </td>
                               ))}
-                              <td className="px-3 py-2 font-black text-slate-900">{cfg.fmt(s.value)}</td>
                               <td className="px-3 py-2">
                                 <div className="flex items-center gap-2">
                                   <div className="w-16 h-1.5 rounded-full bg-[#e8f5ee] overflow-hidden">
-                                    <div className="h-full rounded-full" style={{ width:`${(s.value/maxVal)*100}%`, backgroundColor:ZONE_COLORS[s.zone]||cfg.color }} />
+                                    <div className="h-full rounded-full" style={{ width:`${(s.value/stateMaxVal)*100}%`, backgroundColor:ZONE_COLORS[s.zone]||cfg.color }} />
                                   </div>
                                   <span className="text-[10px] font-bold text-[#5a7a6a]">{share}%</span>
                                 </div>
@@ -511,6 +601,222 @@ function DrillDownModal({ kpiLabel, data, onClose }: { kpiLabel: string; data: t
   );
 }
 
+// ─── AnnualDrillModal ─────────────────────────────────────────────────────────
+// Flow: Zonal → State (no quarterly level)
+type ADrillLevel = "zonal" | "state";
+
+function AnnualDrillModal({ kpiLabel, stateTable, onClose }: {
+  kpiLabel: string;
+  stateTable: ReturnType<typeof computeData>["stateTable"];
+  onClose: () => void;
+}) {
+  const [level, setLevel]           = React.useState<ADrillLevel>("zonal");
+  const [activeZone, setActiveZone] = React.useState(ZONES[0]);
+
+  const cfg = KPI_ANNUAL_CONFIG[kpiLabel];
+  if (!cfg) return null;
+
+  const field = cfg.field as keyof typeof stateTable[0];
+
+  // ── Zonal totals ──
+  const zonalBreakdown = ZONES.map(zone => {
+    const value = stateTable
+      .filter(r => r.zone === zone)
+      .reduce((s, r) => s + (Number(r[field]) || 0), 0);
+    return { zone, value };
+  }).sort((a, b) => b.value - a.value);
+
+  const annualTotal = zonalBreakdown.reduce((s, z) => s + z.value, 0);
+
+  // ── State breakdown for active zone ──
+  const stateBreakdown = stateTable
+    .filter(r => r.zone === activeZone)
+    .map(r => ({ state: r.state, zone: r.zone, value: Number(r[field]) || 0 }))
+    .sort((a, b) => b.value - a.value);
+
+  const zoneTotal = stateBreakdown.reduce((s, r) => s + r.value, 0);
+  const stateMaxVal = stateBreakdown[0]?.value || 1;
+
+  const breadcrumb = (
+    <div className="flex items-center gap-1.5 text-[10px] text-[#5a7a6a] mt-0.5">
+      <button onClick={() => setLevel("zonal")}
+        className={`font-bold transition-colors ${level==="zonal"?"text-[#145c3f]":"hover:text-[#145c3f]"}`}>
+        Zone Breakdown
+      </button>
+      {level === "state" && (
+        <><ChevronRight className="w-3 h-3"/>
+        <span className="font-bold text-[#145c3f]">{activeZone}</span></>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ opacity:0, scale:0.96, y:16 }} animate={{ opacity:1, scale:1, y:0 }}
+        exit={{ opacity:0, scale:0.96, y:16 }} transition={{ duration:0.2 }}
+        className="relative z-10 w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-[#d4e8dc] flex flex-col"
+        style={{ maxHeight: "88vh" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#d4e8dc] bg-[#f0fdf7] rounded-t-3xl shrink-0">
+          <div className="flex items-center gap-3">
+            {level === "state" && (
+              <button onClick={() => setLevel("zonal")}
+                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#d4e8dc] transition-colors text-[#145c3f]">
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+            <div>
+              <p className="text-sm font-black text-slate-900">{cfg.label} — Drill-Down</p>
+              {breadcrumb}
+            </div>
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-[#d4e8dc] transition-colors text-slate-500">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="p-6 space-y-5">
+
+            {/* ════ ZONAL LEVEL ════ */}
+            {level === "zonal" && (
+              <>
+                <div className="flex items-center justify-between p-4 rounded-2xl border border-[#d4e8dc] bg-[#f0fdf7]">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Annual Total</p>
+                    <p className="text-2xl font-black text-slate-900 mt-0.5">{cfg.fmt(annualTotal)}</p>
+                  </div>
+                  <p className="text-[10px] font-bold text-[#145c3f]">Click a zone → state breakdown →</p>
+                </div>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={zonalBreakdown} barSize={36}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8f5ee" />
+                      <XAxis dataKey="zone" tick={{ fontSize:9, fill:"#5a7a6a", fontWeight:700 }} axisLine={false} tickLine={false}
+                        tickFormatter={z => z.split(" ")[0] + " " + z.split(" ")[1]} />
+                      <YAxis tick={{ fontSize:10, fill:"#5a7a6a" }} axisLine={false} tickLine={false}
+                        tickFormatter={v => v.toLocaleString()} />
+                      <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }}
+                        formatter={(v:number) => [cfg.fmt(v), cfg.label]} />
+                      <Bar dataKey="value" radius={[8,8,0,0]} cursor="pointer"
+                        onClick={(d: any) => { setActiveZone(d.zone); setLevel("state"); }}>
+                        {zonalBreakdown.map(z => <Cell key={z.zone} fill={ZONE_COLORS[z.zone]||cfg.color} fillOpacity={0.85} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {zonalBreakdown.map(z => {
+                    const pct = annualTotal > 0 ? Math.round((z.value/annualTotal)*100) : 0;
+                    const col = ZONE_COLORS[z.zone] || cfg.color;
+                    return (
+                      <button key={z.zone}
+                        onClick={() => { setActiveZone(z.zone); setLevel("state"); }}
+                        className="p-4 rounded-2xl border bg-white hover:shadow-md hover:-translate-y-0.5 transition-all text-left group"
+                        style={{ borderColor: col + "40" }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-bold text-[#5a7a6a] leading-tight">{z.zone}</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ backgroundColor: col+"18", color: col }}>{pct}%</span>
+                        </div>
+                        <p className="text-base font-black text-slate-900">{cfg.fmt(z.value)}</p>
+                        <div className="mt-2 h-1 rounded-full bg-[#e8f5ee] overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width:`${pct}%`, backgroundColor:col }} />
+                        </div>
+                        <p className="text-[10px] font-semibold mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ color: col }}>
+                          View states <ChevronRight className="w-3 h-3" />
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* ════ STATE LEVEL ════ */}
+            {level === "state" && (
+              <>
+                <PillTabs options={ZONES} active={activeZone} onChange={z => setActiveZone(z)} />
+                <div className="flex items-center justify-between p-4 rounded-2xl border border-[#d4e8dc] bg-[#f0fdf7]">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">{activeZone} — {cfg.label}</p>
+                    <p className="text-2xl font-black text-slate-900 mt-0.5">{cfg.fmt(zoneTotal)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-[#5a7a6a]">{stateBreakdown.filter(s=>s.value>0).length} states reported</p>
+                  </div>
+                </div>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stateBreakdown} layout="vertical" barSize={10} margin={{ left:8, right:24 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8f5ee" />
+                      <XAxis type="number" tick={{ fontSize:10, fill:"#5a7a6a" }} axisLine={false} tickLine={false}
+                        tickFormatter={v => v.toLocaleString()} />
+                      <YAxis type="category" dataKey="state" tick={{ fontSize:10, fill:"#334155", fontWeight:600 }} axisLine={false} tickLine={false} width={72} />
+                      <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }}
+                        formatter={(v:number) => [cfg.fmt(v), cfg.label]} />
+                      <Bar dataKey="value" radius={[0,6,6,0]}>
+                        {stateBreakdown.map(s => <Cell key={s.state} fill={ZONE_COLORS[s.zone]||cfg.color} fillOpacity={0.85} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="rounded-2xl border border-[#d4e8dc] overflow-hidden">
+                  <div className="bg-[#f0fdf7] border-b border-[#d4e8dc] px-3 py-2 flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">{activeZone} States</p>
+                    <p className="text-[10px] text-[#5a7a6a]">{stateBreakdown.length} states</p>
+                  </div>
+                  <div className="overflow-y-auto" style={{ maxHeight: "280px" }}>
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-[#f0fdf7] border-b border-[#d4e8dc] z-10">
+                        <tr>
+                          <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">#</th>
+                          <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">State</th>
+                          <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">{cfg.label}</th>
+                          <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a]">Share</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stateBreakdown.map((s, i) => {
+                          const share = zoneTotal > 0 ? Math.round((s.value/zoneTotal)*100) : 0;
+                          const col = ZONE_COLORS[s.zone] || cfg.color;
+                          return (
+                            <tr key={s.state} className="border-b border-[#e8f5ee] hover:bg-[#f0fdf7] transition-colors">
+                              <td className="px-3 py-2 text-[#5a7a6a] font-bold">{i+1}</td>
+                              <td className="px-3 py-2 font-bold text-slate-800 whitespace-nowrap">{s.state}</td>
+                              <td className="px-3 py-2 font-black text-slate-900">
+                                {s.value > 0 ? cfg.fmt(s.value) : <span className="text-slate-300">—</span>}
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 h-1.5 rounded-full bg-[#e8f5ee] overflow-hidden">
+                                    <div className="h-full rounded-full" style={{ width:`${(s.value/stateMaxVal)*100}%`, backgroundColor:col }} />
+                                  </div>
+                                  <span className="text-[10px] font-bold text-[#5a7a6a]">{share}%</span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const FILTER_OPTIONS = ["All","IGR","GIFSHIP","BHCPF Lives","Complaints","Resolution Rate"];
@@ -559,354 +865,365 @@ export default function SDOPerformance() {
   const card = "rounded-2xl border border-[#d4e8dc] bg-white shadow-sm hover:shadow-md transition-all";
   const lbl  = "text-[10px] font-bold uppercase tracking-[0.15em] text-[#5a7a6a]";
 
+  // Determine which modal type to show
+  const isAnnualDrill = drillKPI ? drillKPI in KPI_ANNUAL_CONFIG : false;
+  const isQuarterlyDrill = drillKPI ? drillKPI in KPI_QUARTERLY_CONFIG : false;
+
   return (
-    <div className="space-y-6 pb-16">
-
-      {/* Drill-down modal */}
-      <AnimatePresence>
-        {drillKPI && (
-          <DrillDownModal kpiLabel={drillKPI} data={rows} onClose={() => setDrillKPI(null)} />
-        )}
-      </AnimatePresence>
-
-      {/* ── Year selector ── */}
-      <div className="flex items-center justify-between">
-        <p className={lbl}>National Performance Snapshot</p>
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-[#e8f5ee] border border-[#d4e8dc]">
-          {(["2023","2024","2025"] as Year[]).map(y => (
-            <button key={y} onClick={() => setYear(y)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                year === y ? "bg-[#145c3f] text-white shadow-sm" : "text-[#5a7a6a] hover:text-[#145c3f]"
-              }`}
-            >{y}</button>
-          ))}
-        </div>
+    <>
+      {/* ── NHIA Watermark ── */}
+      <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-0 overflow-hidden">
+        <img src="/logo.png" alt="" aria-hidden className="opacity-[0.035] select-none" style={{ width: '80vw', maxWidth: '900px' }} />
       </div>
 
-      {/* ── KPI Strip ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {KPI_STRIP.map(k => (
-          <button key={k.label} onClick={() => KPI_DRILL_CONFIG[k.label] && setDrillKPI(k.label)}
-            className={`relative rounded-2xl border bg-white p-4 shadow-sm text-left overflow-hidden group transition-all ${
-              KPI_DRILL_CONFIG[k.label] ? "hover:shadow-lg hover:-translate-y-1 cursor-pointer" : "cursor-default"
-            }`}
-            style={{ borderColor: k.color + "40" }}
-          >
-            <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ backgroundColor: k.color }} />
-            <p className="text-[9px] text-[#5a7a6a] font-semibold uppercase tracking-wider mb-2 mt-1 leading-tight">{k.label}</p>
-            <p className="text-xl font-black text-slate-900 tracking-tight">{k.value}</p>
-            <div className="flex items-center gap-1 mt-2">
-              <span className="flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                <TrendingUp className="w-2.5 h-2.5" />+{k.trend}%
-              </span>
-            </div>
-            {KPI_DRILL_CONFIG[k.label] && (
+      {/* ── All content above watermark ── */}
+      <div className="relative z-10 space-y-6 pb-16">
+
+        {/* Drill-down modals */}
+        <AnimatePresence>
+          {drillKPI && isQuarterlyDrill && (
+            <QuarterlyDrillModal kpiLabel={drillKPI} data={rows} onClose={() => setDrillKPI(null)} />
+          )}
+          {drillKPI && isAnnualDrill && (
+            <AnnualDrillModal kpiLabel={drillKPI} stateTable={d.stateTable} onClose={() => setDrillKPI(null)} />
+          )}
+        </AnimatePresence>
+
+        {/* ── Year selector ── */}
+        <div className="flex items-center justify-between">
+          <p className={lbl}>National Performance Snapshot</p>
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-[#e8f5ee] border border-[#d4e8dc]">
+            {(["2023","2024","2025"] as Year[]).map(y => (
+              <button key={y} onClick={() => setYear(y)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  year === y ? "bg-[#145c3f] text-white shadow-sm" : "text-[#5a7a6a] hover:text-[#145c3f]"
+                }`}
+              >{y}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Data Insights (FIRST section) ── */}
+        <div>
+          <p className={lbl + " mb-3"}>Data Insights — {year}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Top IGR */}
+            {(() => {
+              const top = d.topIGR[0];
+              return top ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <span className="text-xs font-bold text-emerald-700">Top IGR Performer</span>
+                  </div>
+                  <p className="text-base font-black text-slate-900">{top.state} State</p>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                    Leads nationally with <span className="text-emerald-700 font-bold">₦{top.igr}M IGR</span> in {year}, accounting for the highest share of national revenue generation.
+                  </p>
+                </div>
+              ) : null;
+            })()}
+
+            {/* Critical complaint flag */}
+            {(() => {
+              const flag = [...d.stateTable].filter(s=>s.complaints>100&&s.resolution<50)[0];
+              return flag ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-xl bg-rose-100 flex items-center justify-center">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                    </div>
+                    <span className="text-xs font-bold text-rose-700">Critical Flag · Urgent Action</span>
+                  </div>
+                  <p className="text-base font-black text-slate-900">{flag.state} State</p>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                    <span className="text-rose-700 font-bold">{flag.resolution}% resolution rate</span> on <span className="font-bold text-slate-900">{flag.complaints.toLocaleString()} complaints</span>. Requires immediate SDO escalation.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <Award className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <span className="text-xs font-bold text-emerald-700">Strong Compliance</span>
+                  </div>
+                  <p className="text-base font-black text-slate-900">No Critical Flags</p>
+                  <p className="text-[11px] text-slate-600 mt-1">All states with high complaint volumes are maintaining acceptable resolution rates in {year}.</p>
+                </div>
+              );
+            })()}
+
+            {/* Top GIFSHIP */}
+            {(() => {
+              const top = [...d.stateTable].sort((a,b)=>b.gifship-a.gifship)[0];
+              return top ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-xl bg-amber-100 flex items-center justify-center">
+                      <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                    </div>
+                    <span className="text-xs font-bold text-amber-700">GIFSHIP Champion</span>
+                  </div>
+                  <p className="text-base font-black text-slate-900">{top.state} State</p>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                    Highest GIFSHIP enrolments at <span className="text-amber-700 font-bold">{top.gifship.toLocaleString()}</span> with <span className="font-bold text-slate-900">₦{top.igr}M IGR</span> in {year}.
+                  </p>
+                </div>
+              ) : null;
+            })()}
+          </div>
+        </div>
+
+        {/* ── KPI Strip ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {KPI_STRIP.map(k => (
+            <button key={k.label} onClick={() => ALL_DRILL_LABELS.has(k.label) && setDrillKPI(k.label)}
+              className={`relative rounded-2xl border bg-white p-4 shadow-sm text-left overflow-hidden group transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer`}
+              style={{ borderColor: k.color + "40" }}
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ backgroundColor: k.color }} />
+              <p className="text-[9px] text-[#5a7a6a] font-semibold uppercase tracking-wider mb-2 mt-1 leading-tight">{k.label}</p>
+              <p className="text-xl font-black text-slate-900 tracking-tight">{k.value}</p>
+              <div className="flex items-center gap-1 mt-2">
+                <span className="flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                  <TrendingUp className="w-2.5 h-2.5" />+{k.trend}%
+                </span>
+              </div>
               <p className="text-[9px] text-[#25a872] font-semibold mt-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 Drill down <ChevronRight className="w-3 h-3" />
               </p>
-            )}
-          </button>
-        ))}
-      </div>
+            </button>
+          ))}
+        </div>
 
-      {/* ── Sparkline row ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {SPARKLINE_CARDS.map(s => (
-          <div key={s.label} className={card + " p-4"}>
-            <div className="flex items-start justify-between mb-1">
-              <p className="text-[10px] text-[#5a7a6a] font-semibold uppercase tracking-wider leading-tight">{s.label}</p>
-              <span className="text-[10px] font-bold text-emerald-600">+{s.trend}%</span>
+        {/* ── Sparkline row ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {SPARKLINE_CARDS.map(s => (
+            <div key={s.label} className={card + " p-4"}>
+              <div className="flex items-start justify-between mb-1">
+                <p className="text-[10px] text-[#5a7a6a] font-semibold uppercase tracking-wider leading-tight">{s.label}</p>
+                <span className="text-[10px] font-bold text-emerald-600">+{s.trend}%</span>
+              </div>
+              <p className="text-xl font-black text-slate-900 mb-1">{s.value}</p>
+              <Sparkline data={s.data} color={s.color} />
             </div>
-            <p className="text-xl font-black text-slate-900 mb-1">{s.value}</p>
-            <Sparkline data={s.data} color={s.color} />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* ── Bar + Donut ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className={card + " xl:col-span-2 p-5"}>
-          <p className="text-sm font-bold text-slate-800 mb-1">Top 12 States by IGR</p>
-          <p className="text-[10px] text-[#5a7a6a] mb-4">Internally Generated Revenue — {year} (₦ Millions)</p>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={d.topIGR} layout="vertical" barSize={12} margin={{ left:8, right:24 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8f5ee" />
-              <XAxis type="number" tick={{ fontSize:10, fill:"#5a7a6a" }} axisLine={false} tickLine={false} tickFormatter={v=>`₦${v}M`} />
-              <YAxis type="category" dataKey="state" tick={{ fontSize:11, fill:"#334155", fontWeight:600 }} axisLine={false} tickLine={false} width={64} />
-              <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }} formatter={(v:number)=>[`₦${v}M`,"IGR"]} />
-              <Bar dataKey="igr" radius={[0,6,6,0]}>
-                {d.topIGR.map(e => <Cell key={e.state} fill={ZONE_COLORS[e.zone]} fillOpacity={0.85} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="flex flex-wrap gap-3 mt-3">
-            {Object.entries(ZONE_COLORS).map(([zone,color]) => (
-              <span key={zone} className="flex items-center gap-1.5 text-[10px] text-[#5a7a6a]">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor:color }} />{zone}
-              </span>
-            ))}
+        {/* ── Bar + Donut ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div className={card + " xl:col-span-2 p-5"}>
+            <p className="text-sm font-bold text-slate-800 mb-1">Top 12 States by IGR</p>
+            <p className="text-[10px] text-[#5a7a6a] mb-4">Internally Generated Revenue — {year} (₦ Millions)</p>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={d.topIGR} layout="vertical" barSize={12} margin={{ left:8, right:24 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8f5ee" />
+                <XAxis type="number" tick={{ fontSize:10, fill:"#5a7a6a" }} axisLine={false} tickLine={false} tickFormatter={v=>`₦${v}M`} />
+                <YAxis type="category" dataKey="state" tick={{ fontSize:11, fill:"#334155", fontWeight:600 }} axisLine={false} tickLine={false} width={64} />
+                <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }} formatter={(v:number)=>[`₦${v}M`,"IGR"]} />
+                <Bar dataKey="igr" radius={[0,6,6,0]}>
+                  {d.topIGR.map(e => <Cell key={e.state} fill={ZONE_COLORS[e.zone]} fillOpacity={0.85} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap gap-3 mt-3">
+              {Object.entries(ZONE_COLORS).map(([zone,color]) => (
+                <span key={zone} className="flex items-center gap-1.5 text-[10px] text-[#5a7a6a]">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor:color }} />{zone}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className={card + " p-5 flex flex-col"}>
+            <p className="text-sm font-bold text-slate-800 mb-1">IGR by Zone</p>
+            <p className="text-[10px] text-[#5a7a6a] mb-3">{year} distribution</p>
+            <div className="flex-1 flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={d.donut} cx="50%" cy="50%" innerRadius={58} outerRadius={88} dataKey="value" paddingAngle={3} strokeWidth={0}>
+                    {d.donut.map(dd => <Cell key={dd.name} fill={dd.color} fillOpacity={0.9} />)}
+                  </Pie>
+                  <DonutCenter total={igrTotal} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-2 mt-2">
+              {d.donut.map(dd => (
+                <div key={dd.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor:dd.color }} />
+                    <span className="text-[11px] text-[#5a7a6a]">{dd.name}</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-700">{dd.value}%</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className={card + " p-5 flex flex-col"}>
-          <p className="text-sm font-bold text-slate-800 mb-1">IGR by Zone</p>
-          <p className="text-[10px] text-[#5a7a6a] mb-3">{year} distribution</p>
-          <div className="flex-1 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={d.donut} cx="50%" cy="50%" innerRadius={58} outerRadius={88} dataKey="value" paddingAngle={3} strokeWidth={0}>
-                  {d.donut.map(dd => <Cell key={dd.name} fill={dd.color} fillOpacity={0.9} />)}
-                </Pie>
-                <DonutCenter total={igrTotal} />
-              </PieChart>
+        {/* ── Zone cards ── */}
+        <div>
+          <p className={lbl + " mb-3"}>Zone-Level Performance — {year}</p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {d.zoneCards.map(z => {
+              const pct = Math.round((z.gifship/z.gifshipMax)*100);
+              const col = ZONE_COLORS[z.zone];
+              return (
+                <div key={z.zone} className={card + " p-4"}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-slate-800">{z.zone}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                      style={{ backgroundColor:col+"18", color:col, borderColor:col+"40" }}>{z.igr}</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    <div>
+                      <div className="flex justify-between text-[10px] text-[#5a7a6a] mb-1">
+                        <span>GIFSHIP</span><span className="text-slate-700 font-semibold">{fmt(z.gifship)}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[#e8f5ee] overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width:`${pct}%`, backgroundColor:col }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-[10px] text-[#5a7a6a] mb-1">
+                        <span>Resolution</span>
+                        <span className="font-bold" style={{ color:resColor(z.resolution) }}>{z.resolution}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[#e8f5ee] overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width:`${z.resolution}%`, backgroundColor:resColor(z.resolution) }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── State table ── */}
+        <div className="rounded-2xl border border-[#d4e8dc] bg-white shadow-sm overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-[#d4e8dc] bg-[#f0fdf7]">
+            <div>
+              <p className="text-sm font-bold text-slate-800">State Performance Table — {year}</p>
+              <p className="text-[10px] text-[#5a7a6a] mt-0.5">{filtered.length} states · sorted by {filter}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex gap-1.5 flex-wrap">
+                {FILTER_OPTIONS.map(f => (
+                  <button key={f} onClick={() => setFilter(f)}
+                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
+                      filter===f ? "bg-[#145c3f] border-[#145c3f] text-white" : "border-[#c8e6d8] text-[#5a7a6a] hover:border-[#25a872] hover:text-[#145c3f]"
+                    }`}>{f}</button>
+                ))}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5a7a6a]" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search state..."
+                  className="pl-8 pr-3 h-8 w-40 rounded-xl bg-white border-2 border-[#1a7a52] text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#145c3f] focus:ring-2 focus:ring-[#25a872]/20 transition-all" />
+              </div>
+            </div>
+          </div>
+          <ScrollArea className="h-[420px]">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 z-10 bg-[#f0fdf7] border-b border-[#d4e8dc]">
+                <tr>
+                  {["State","Zone","GIFSHIP","BHCPF","IGR (₦M)","Complaints","Resolution","CEmONC","FFP","FSSHIP","Status"].map(h => (
+                    <th key={h} className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a] whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(row => (
+                  <tr key={row.state}
+                    className={`border-b border-[#e8f5ee] transition-colors hover:bg-[#f0fdf7] ${row.state==="Enugu"?"bg-rose-50/60":""}`}>
+                    <td className="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        {(row.igr > 50 || row.gifship > 2000) && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
+                        {row.complaints > 200 && row.resolution < 50 && <AlertTriangle className="w-3 h-3 text-rose-500" />}
+                        {row.state}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor:ZONE_COLORS[row.zone]+"18", color:ZONE_COLORS[row.zone] }}>
+                        {row.zone.split(" ")[0]}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-700 font-semibold">{fmt(row.gifship)}</td>
+                    <td className="px-3 py-2.5 text-slate-600">{fmt(row.bhcpf)}</td>
+                    <td className="px-3 py-2.5 font-bold" style={{ color:row.igr>50?"#16a34a":row.igr>15?"#d97706":"#64748b" }}>
+                      ₦{row.igr}M
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-500">{row.complaints.toLocaleString()}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-14 h-1.5 rounded-full bg-[#e8f5ee] overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width:`${row.resolution}%`, backgroundColor:resColor(row.resolution) }} />
+                        </div>
+                        <span className="font-bold text-[11px]" style={{ color:resColor(row.resolution) }}>{row.resolution}%</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-500">{row.cemonc.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-slate-500">{fmt(row.ffp)}</td>
+                    <td className="px-3 py-2.5 text-slate-500">{fmt(row.fsship)}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        row.status==="Active" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-amber-100 text-amber-700 border border-amber-200"
+                      }`}>{row.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </ScrollArea>
+        </div>
+
+        {/* ── Complaint management ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className={card + " p-5"}>
+            <p className="text-sm font-bold text-slate-800 mb-1">Top 10 States by Complaint Volume — {year}</p>
+            <p className="text-[10px] text-[#5a7a6a] mb-4">Bar colour = resolution rate</p>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={d.complaintBars} layout="vertical" barSize={12} margin={{ left:8, right:16 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8f5ee" />
+                <XAxis type="number" tick={{ fontSize:10, fill:"#5a7a6a" }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="state" tick={{ fontSize:11, fill:"#334155", fontWeight:600 }} axisLine={false} tickLine={false} width={60} />
+                <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }}
+                  formatter={(v:number,_:string,p:any)=>[`${v} complaints · ${p.payload.resolution}% resolved`, p.payload.state]} />
+                <Bar dataKey="complaints" radius={[0,6,6,0]}>
+                  {d.complaintBars.map(b => <Cell key={b.state} fill={b.color} fillOpacity={0.85} />)}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="space-y-2 mt-2">
-            {d.donut.map(dd => (
-              <div key={dd.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor:dd.color }} />
-                  <span className="text-[11px] text-[#5a7a6a]">{dd.name}</span>
-                </div>
-                <span className="text-[11px] font-bold text-slate-700">{dd.value}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      {/* ── Zone cards ── */}
-      <div>
-        <p className={lbl + " mb-3"}>Zone-Level Performance — {year}</p>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {d.zoneCards.map(z => {
-            const pct = Math.round((z.gifship/z.gifshipMax)*100);
-            const col = ZONE_COLORS[z.zone];
-            return (
-              <div key={z.zone} className={card + " p-4"}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold text-slate-800">{z.zone}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
-                    style={{ backgroundColor:col+"18", color:col, borderColor:col+"40" }}>{z.igr}</span>
-                </div>
-                <div className="space-y-2.5">
-                  <div>
-                    <div className="flex justify-between text-[10px] text-[#5a7a6a] mb-1">
-                      <span>GIFSHIP</span><span className="text-slate-700 font-semibold">{fmt(z.gifship)}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-[#e8f5ee] overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width:`${pct}%`, backgroundColor:col }} />
-                    </div>
+          <div className={card + " p-5"}>
+            <p className="text-sm font-bold text-slate-800 mb-1">Resolution Leaderboard</p>
+            <p className="text-[10px] text-[#5a7a6a] mb-4">States with highest resolution rates</p>
+            <div className="space-y-2.5">
+              {[...d.stateTable].filter(s=>s.complaints>0).sort((a,b)=>b.resolution-a.resolution).slice(0,6).map((s,i) => (
+                <div key={s.state} className="flex items-center gap-3 p-3 rounded-xl bg-[#f0fdf7] border border-[#d4e8dc] hover:border-[#25a872] transition-all">
+                  <span className="w-6 h-6 rounded-full bg-[#145c3f] text-white text-[10px] font-black flex items-center justify-center shrink-0">{i+1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-800">{s.state}</p>
+                    <p className="text-[10px] text-[#5a7a6a]">{s.zone}</p>
                   </div>
-                  <div>
-                    <div className="flex justify-between text-[10px] text-[#5a7a6a] mb-1">
-                      <span>Resolution</span>
-                      <span className="font-bold" style={{ color:resColor(z.resolution) }}>{z.resolution}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-[#e8f5ee] overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width:`${z.resolution}%`, backgroundColor:resColor(z.resolution) }} />
-                    </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-[#145c3f]">{s.complaints} complaints</p>
+                    <p className="text-[10px] text-emerald-600">{s.resolution}% resolved</p>
                   </div>
+                  <Award className="w-4 h-4 text-amber-500 shrink-0" />
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── State table ── */}
-      <div className="rounded-2xl border border-[#d4e8dc] bg-white shadow-sm overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-[#d4e8dc] bg-[#f0fdf7]">
-          <div>
-            <p className="text-sm font-bold text-slate-800">State Performance Table — {year}</p>
-            <p className="text-[10px] text-[#5a7a6a] mt-0.5">{filtered.length} states · sorted by {filter}</p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex gap-1.5 flex-wrap">
-              {FILTER_OPTIONS.map(f => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-all ${
-                    filter===f ? "bg-[#145c3f] border-[#145c3f] text-white" : "border-[#c8e6d8] text-[#5a7a6a] hover:border-[#25a872] hover:text-[#145c3f]"
-                  }`}>{f}</button>
               ))}
             </div>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5a7a6a]" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search state..."
-                className="pl-8 pr-3 h-8 w-40 rounded-xl bg-white border-2 border-[#1a7a52] text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#145c3f] focus:ring-2 focus:ring-[#25a872]/20 transition-all" />
-            </div>
           </div>
         </div>
-        <ScrollArea className="h-[420px]">
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 z-10 bg-[#f0fdf7] border-b border-[#d4e8dc]">
-              <tr>
-                {["State","Zone","GIFSHIP","BHCPF","IGR (₦M)","Complaints","Resolution","CEmONC","FFP","FSSHIP","Status"].map(h => (
-                  <th key={h} className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#5a7a6a] whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(row => (
-                <tr key={row.state}
-                  className={`border-b border-[#e8f5ee] transition-colors hover:bg-[#f0fdf7] ${row.state==="Enugu"?"bg-rose-50/60":""}`}>
-                  <td className="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
-                      {(row.igr > 50 || row.gifship > 2000) && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
-                      {row.complaints > 200 && row.resolution < 50 && <AlertTriangle className="w-3 h-3 text-rose-500" />}
-                      {row.state}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                      style={{ backgroundColor:ZONE_COLORS[row.zone]+"18", color:ZONE_COLORS[row.zone] }}>
-                      {row.zone.split(" ")[0]}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-700 font-semibold">{fmt(row.gifship)}</td>
-                  <td className="px-3 py-2.5 text-slate-600">{fmt(row.bhcpf)}</td>
-                  <td className="px-3 py-2.5 font-bold" style={{ color:row.igr>50?"#16a34a":row.igr>15?"#d97706":"#64748b" }}>
-                    ₦{row.igr}M
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-500">{row.complaints.toLocaleString()}</td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-14 h-1.5 rounded-full bg-[#e8f5ee] overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width:`${row.resolution}%`, backgroundColor:resColor(row.resolution) }} />
-                      </div>
-                      <span className="font-bold text-[11px]" style={{ color:resColor(row.resolution) }}>{row.resolution}%</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-500">{row.cemonc.toLocaleString()}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{fmt(row.ffp)}</td>
-                  <td className="px-3 py-2.5 text-slate-500">{fmt(row.fsship)}</td>
-                  <td className="px-3 py-2.5">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      row.status==="Active" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-amber-100 text-amber-700 border border-amber-200"
-                    }`}>{row.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </ScrollArea>
+
       </div>
-
-      {/* ── Complaint management ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className={card + " p-5"}>
-          <p className="text-sm font-bold text-slate-800 mb-1">Top 10 States by Complaint Volume — {year}</p>
-          <p className="text-[10px] text-[#5a7a6a] mb-4">Bar colour = resolution rate</p>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={d.complaintBars} layout="vertical" barSize={12} margin={{ left:8, right:16 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e8f5ee" />
-              <XAxis type="number" tick={{ fontSize:10, fill:"#5a7a6a" }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="state" tick={{ fontSize:11, fill:"#334155", fontWeight:600 }} axisLine={false} tickLine={false} width={60} />
-              <RTooltip contentStyle={{ background:"#fff", border:"1px solid #d4e8dc", borderRadius:12, fontSize:12 }}
-                formatter={(v:number,_:string,p:any)=>[`${v} complaints · ${p.payload.resolution}% resolved`, p.payload.state]} />
-              <Bar dataKey="complaints" radius={[0,6,6,0]}>
-                {d.complaintBars.map(b => <Cell key={b.state} fill={b.color} fillOpacity={0.85} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className={card + " p-5"}>
-          <p className="text-sm font-bold text-slate-800 mb-1">Resolution Leaderboard</p>
-          <p className="text-[10px] text-[#5a7a6a] mb-4">States with highest resolution rates</p>
-          <div className="space-y-2.5">
-            {[...d.stateTable].filter(s=>s.complaints>0).sort((a,b)=>b.resolution-a.resolution).slice(0,6).map((s,i) => (
-              <div key={s.state} className="flex items-center gap-3 p-3 rounded-xl bg-[#f0fdf7] border border-[#d4e8dc] hover:border-[#25a872] transition-all">
-                <span className="w-6 h-6 rounded-full bg-[#145c3f] text-white text-[10px] font-black flex items-center justify-center shrink-0">{i+1}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-800">{s.state}</p>
-                  <p className="text-[10px] text-[#5a7a6a]">{s.zone}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-[#145c3f]">{s.complaints} complaints</p>
-                  <p className="text-[10px] text-emerald-600">{s.resolution}% resolved</p>
-                </div>
-                <Award className="w-4 h-4 text-amber-500 shrink-0" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Insights ── */}
-      <div>
-        <p className={lbl + " mb-3"}>Data Insights — {year}</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Top IGR */}
-          {(() => {
-            const top = d.topIGR[0];
-            return top ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center">
-                    <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                  </div>
-                  <span className="text-xs font-bold text-emerald-700">Top IGR Performer</span>
-                </div>
-                <p className="text-base font-black text-slate-900">{top.state} State</p>
-                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                  Leads nationally with <span className="text-emerald-700 font-bold">₦{top.igr}M IGR</span> in {year}, accounting for the highest share of national revenue generation.
-                </p>
-              </div>
-            ) : null;
-          })()}
-
-          {/* Critical complaint flag */}
-          {(() => {
-            const flag = [...d.stateTable].filter(s=>s.complaints>100&&s.resolution<50)[0];
-            return flag ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-xl bg-rose-100 flex items-center justify-center">
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                  </div>
-                  <span className="text-xs font-bold text-rose-700">Critical Flag · Urgent Action</span>
-                </div>
-                <p className="text-base font-black text-slate-900">{flag.state} State</p>
-                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                  <span className="text-rose-700 font-bold">{flag.resolution}% resolution rate</span> on <span className="font-bold text-slate-900">{flag.complaints.toLocaleString()} complaints</span>. Requires immediate SDO escalation.
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center">
-                    <Award className="w-3.5 h-3.5 text-emerald-600" />
-                  </div>
-                  <span className="text-xs font-bold text-emerald-700">Strong Compliance</span>
-                </div>
-                <p className="text-base font-black text-slate-900">No Critical Flags</p>
-                <p className="text-[11px] text-slate-600 mt-1">All states with high complaint volumes are maintaining acceptable resolution rates in {year}.</p>
-              </div>
-            );
-          })()}
-
-          {/* Top GIFSHIP */}
-          {(() => {
-            const top = [...d.stateTable].sort((a,b)=>b.gifship-a.gifship)[0];
-            return top ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-xl bg-amber-100 flex items-center justify-center">
-                    <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
-                  </div>
-                  <span className="text-xs font-bold text-amber-700">GIFSHIP Champion</span>
-                </div>
-                <p className="text-base font-black text-slate-900">{top.state} State</p>
-                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                  Highest GIFSHIP enrolments at <span className="text-amber-700 font-bold">{top.gifship.toLocaleString()}</span> with <span className="font-bold text-slate-900">₦{top.igr}M IGR</span> in {year}.
-                </p>
-              </div>
-            ) : null;
-          })()}
-        </div>
-      </div>
-
-    </div>
+    </>
   );
 }
