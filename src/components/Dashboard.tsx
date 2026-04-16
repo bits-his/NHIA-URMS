@@ -43,11 +43,12 @@ import MonthlyReportsList from "./monthly/MonthlyReportsList";
 import DeptMonthlyPage from "./monthly/DeptMonthlyPage";
 import SidebarNav from "./SidebarNav";
 import AdminSettingsPage from "./admin/AdminSettingsPage";
+import StateCoordinatorPanel from "./StateCoordinatorPanel";
 import ZonalDirectorDashboard from "./ZonalDirectorDashboard";
 import StateOfficeDashboard from "./StateOfficeDashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Role = "state-officer" | "zonal-coordinator" | "state-coordinator" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
+type Role = "state-officer" | "zonal-coordinator" | "state-coordinator" | "department-officer" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
 type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verification" | "stock-verifications-list" | "stock-assets" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list";
 interface DashboardProps { role: Role; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
@@ -113,7 +114,7 @@ function getMenuItems(role: Role, view: View, setView: (v: View) => void) {
 function getRoleLabel(r: Role) {
   const map: Record<Role, string> = {
     "state-officer": "State Officer", "zonal-coordinator": "Zonal Coordinator",
-    "state-coordinator": "State Coordinator",
+    "state-coordinator": "State Coordinator", "department-officer": "Department Officer",
     "sdo": "SDO / DGO", "hq-department": "HQ Department",
     "audit": "Audit Team", "dg-ceo": "DG / CEO", "admin": "Administrator",
   };
@@ -121,14 +122,15 @@ function getRoleLabel(r: Role) {
 }
 function getUserInfo(r: Role) {
   const map: Record<Role, { name: string; initials: string; email: string; dept: string }> = {
-    "state-officer":     { name: "State Officer",      initials: "SO",  email: "so@nhia.gov.ng",  dept: "State Office"       },
-    "zonal-coordinator": { name: "Zonal Coordinator",  initials: "ZC",  email: "zc@nhia.gov.ng",  dept: "Zonal Coordination" },
-    "state-coordinator": { name: "State Coordinator",  initials: "SC",  email: "sc@nhia.gov.ng",  dept: "State Coordination" },
-    "sdo":               { name: "SDO / DGO",          initials: "SDO", email: "sdo@nhia.gov.ng", dept: "State Directorate"  },
-    "hq-department":     { name: "HQ Department",      initials: "HQ",  email: "hq@nhia.gov.ng",  dept: "Headquarters"       },
-    "audit":             { name: "Audit Team",         initials: "AUD", email: "audit@nhia.gov.ng",dept: "Audit & Compliance" },
-    "dg-ceo":            { name: "DG / CEO",           initials: "DG",  email: "dg@nhia.gov.ng",  dept: "Executive Office"   },
-    "admin":             { name: "Administrator",      initials: "ADM", email: "admin@nhia.gov.ng",dept: "System Admin"       },
+    "state-officer":      { name: "State Officer",      initials: "SO",  email: "so@nhia.gov.ng",  dept: "State Office"       },
+    "zonal-coordinator":  { name: "Zonal Coordinator",  initials: "ZC",  email: "zc@nhia.gov.ng",  dept: "Zonal Coordination" },
+    "state-coordinator":  { name: "State Coordinator",  initials: "SC",  email: "sc@nhia.gov.ng",  dept: "State Coordination" },
+    "department-officer": { name: "Department Officer", initials: "DO",  email: "do@nhia.gov.ng",  dept: "Department"         },
+    "sdo":                { name: "SDO / DGO",          initials: "SDO", email: "sdo@nhia.gov.ng", dept: "State Directorate"  },
+    "hq-department":      { name: "HQ Department",      initials: "HQ",  email: "hq@nhia.gov.ng",  dept: "Headquarters"       },
+    "audit":              { name: "Audit Team",         initials: "AUD", email: "audit@nhia.gov.ng",dept: "Audit & Compliance" },
+    "dg-ceo":             { name: "DG / CEO",           initials: "DG",  email: "dg@nhia.gov.ng",  dept: "Executive Office"   },
+    "admin":              { name: "Administrator",      initials: "ADM", email: "admin@nhia.gov.ng",dept: "System Admin"       },
   };
   return map[r];
 }
@@ -536,8 +538,8 @@ export default function Dashboard({ role, access = [], functionalities = "", onL
                   </div>
                 </div>
 
-                {/* KPI row — hidden for SDO, Zonal Director, and State Officer (have their own KPIs) */}
-                {role !== "sdo" && role !== "zonal-director" && role !== "state-officer" && (
+                {/* KPI row — hidden for SDO, Zonal Coordinator, State Coordinator, and State Officer (have their own KPIs) */}
+                {role !== "sdo" && role !== "zonal-coordinator" && role !== "state-coordinator" && role !== "department-officer" && role !== "state-officer" && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <KPICard title="Reports Submitted" value="124" trend="+12%" trendUp icon={<FileText className="w-5 h-5 text-blue-600" />} tint="kpi-blue" sub="This month" />
                   <KPICard title="Pending Review"    value="18"  trend="-5%"  icon={<Clock className="w-5 h-5 text-amber-600" />}  tint="kpi-amber" sub="Awaiting action" />
@@ -552,12 +554,20 @@ export default function Dashboard({ role, access = [], functionalities = "", onL
                   <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                     <SDOPerformance />
                   </motion.div>
-                ) : role === "zonal-director" ? (
-                  /* Zonal Director: zone + state drill-down dashboard */
+                ) : role === "zonal-coordinator" ? (
+                  /* Zonal Coordinator: zone + state drill-down dashboard */
                   <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                     <ZonalDirectorDashboard
                       zoneName="South West"
                       onReviewReports={() => setView("zonal-review")}
+                    />
+                  </motion.div>
+                ) : role === "state-coordinator" ? (
+                  /* State Coordinator: state offices oversight dashboard */
+                  <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                    <StateCoordinatorPanel
+                      onNewReport={() => setView("report-entry")}
+                      onViewSubmissions={() => setView("annual-reports-list")}
                     />
                   </motion.div>
                 ) : role === "state-officer" ? (
@@ -624,12 +634,9 @@ export default function Dashboard({ role, access = [], functionalities = "", onL
 
                     {/* Role panel */}
                     <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                      {role === "state-officer"     && <StateOfficerPanel onNewReport={() => setView("report-entry")} onAnnualReport={() => setView("annual-report")} onViewSubmissions={() => setView("annual-reports-list")} />}
-                      {role === "zonal-coordinator" && <ZonalDirectorPanel onReviewReports={() => setView("zonal-review")} />}
-                      {role === "state-coordinator" && <StateOfficerPanel onNewReport={() => setView("report-entry")} onAnnualReport={() => setView("annual-report")} onViewSubmissions={() => setView("annual-reports-list")} />}
-                      {role === "dg-ceo"         && <DGCEOPanel />}
-                      {role === "hq-department"  && <HQPanel />}
-                      {role === "audit"          && <AuditPanel />}
+                      {role === "dg-ceo"        && <DGCEOPanel />}
+                      {role === "hq-department" && <HQPanel />}
+                      {role === "audit"         && <AuditPanel />}
                     </motion.div>
                   </div>
 
