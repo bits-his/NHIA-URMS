@@ -94,7 +94,7 @@ const generateStaffId = async (role) => {
 
 const createUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, zone_id, state_id, department_id, unit_id } = req.body;
+    const { name, email, password, role, zone_id, state_id, department_id, unit_id, access } = req.body;
     if (!name || !password || !role) {
       return res.status(400).json({ success: false, message: "name, password, role required" });
     }
@@ -103,7 +103,11 @@ const createUser = async (req, res, next) => {
     }
     const staff_id = await generateStaffId(role);
     const hashed = await bcrypt.hash(password, 12);
-    const user = await User.create({ name, staff_id, email, password: hashed, role, zone_id, state_id, department_id, unit_id });
+    const user = await User.create({
+      name, staff_id, email, password: hashed, role,
+      zone_id, state_id, department_id, unit_id,
+      functionalities: Array.isArray(access) ? access : [],
+    });
     const { password: _pw, ...data } = user.toJSON();
     res.status(201).json({ success: true, data });
   } catch (err) {
