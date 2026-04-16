@@ -13,7 +13,9 @@ const ROLES = [
   { value: "dg-ceo",         label: "DG-CEO"          },
 ];
 
-interface LoginProps { onLogin: (role: string) => void; }
+import type { AccessEntry } from "@/src/access/types";
+
+interface LoginProps { onLogin: (role: string, access: AccessEntry[]) => void; }
 
 export default function Login({ onLogin }: LoginProps) {
   const [staffId,      setStaffId]      = React.useState("");
@@ -42,32 +44,13 @@ export default function Login({ onLogin }: LoginProps) {
     setError(null);
 
     try {
-      if (isAdmin) {
-        // Real JWT auth for admin
-        const res = await authApi.login(staffId, password);
-        if (res.user.role !== "admin") {
-          setError("Access denied. Admin credentials required.");
-          setIsLoading(false);
-          return;
-        }
-        tokenStore.set(res.token);
-        toast.success("Authentication successful", {
-          description: `Welcome, ${res.user.name}. Redirecting to Admin panel...`,
-        });
-        onLogin("admin");
-      } else {
-        // Mock auth for other roles
-        await new Promise(r => setTimeout(r, 900));
-        if (staffId && password && role) {
-          toast.success("Authentication successful", {
-            description: `Welcome, ${staffId}. Redirecting to ${ROLES.find(r => r.value === role)?.label} dashboard...`,
-          });
-          onLogin(role);
-        } else {
-          setError("Invalid credentials or role not selected.");
-          toast.error("Sign in failed", { description: "Check your Staff ID, password and role." });
-        }
-      }
+      // All users authenticate via real JWT — functionalities come from DB
+      const res = await authApi.login(staffId, password);
+      tokenStore.set(res.token);
+      toast.success("Authentication successful", { description: `Welcome, ${res.user.name}.` });
+      // functionalities is already parsed to array by the backend
+      const accessArr = Array.isArray(res.user.functionalities) ? res.user.functionalities : [];
+      onLogin(res.user.role, accessArr);
     } catch (err: any) {
       setError(err.message ?? "Sign in failed.");
       toast.error("Sign in failed");

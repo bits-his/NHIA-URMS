@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const { authenticate, authorize } = require("../middleware/auth");
 const {
-  listUsers, getUser, createUser, updateUser, deleteUser,
+  listUsers, getUser, createUser, updateUser, deleteUser, updatePrivileges,
   listZones, createZone, updateZone, deleteZone,
   listStates, createState, updateState, deleteState,
   listDepartments, createDepartment, updateDepartment, deleteDepartment,
@@ -18,6 +18,7 @@ router.get("/users", listUsers);
 router.get("/users/:id", getUser);
 router.post("/users", createUser);
 router.put("/users/:id", updateUser);
+router.patch("/users/:id/privileges", updatePrivileges);
 router.delete("/users/:id", deleteUser);
 
 // Zonal Offices

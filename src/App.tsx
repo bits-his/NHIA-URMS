@@ -1,28 +1,31 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import * as React from "react";
 import Login from "@/src/components/Login";
 import Dashboard from "@/src/components/Dashboard";
 import { Toaster } from "@/components/ui/sonner";
+import type { AccessEntry } from "@/src/access/types";
 
 type Role = "state-officer" | "zonal-director" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [userRole, setUserRole] = React.useState<Role>("state-officer");
+  const [access, setAccess] = React.useState<AccessEntry[]>([]);
 
-  const handleLogin = (role: string) => {
+  const handleLogin = (role: string, accessArr: AccessEntry[]) => {
     setUserRole(role as Role);
+    setAccess(accessArr);
     setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setAccess([]);
   };
 
   return (
     <>
       {isAuthenticated ? (
-        <Dashboard role={userRole} onLogout={() => setIsAuthenticated(false)} />
+        <Dashboard role={userRole} access={access} onLogout={handleLogout} />
       ) : (
         <Login onLogin={handleLogin} />
       )}

@@ -37,7 +37,7 @@ import SidebarNav from "./SidebarNav";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-director" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
 type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings";
-interface DashboardProps { role: Role; onLogout: () => void; }
+interface DashboardProps { role: Role; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const CHART_DATA = [
@@ -372,12 +372,11 @@ function AuditPanel() {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-export default function Dashboard({ role, onLogout }: DashboardProps) {
+export default function Dashboard({ role, access = [], functionalities = "", onLogout }: DashboardProps) {
   const [view, setView] = React.useState<View>(role === "admin" ? "home" : "home");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [selectedReportRef, setSelectedReportRef] = React.useState<string | null>(null);
   const userInfo = getUserInfo(role);
-  const menuItems = getMenuItems(role, view, setView);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f4f7f5]">
@@ -414,7 +413,7 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
         )}
 
         {/* Nav */}
-        <SidebarNav role={role} view={view} setView={setView} sidebarOpen={sidebarOpen} />
+        <SidebarNav role={role} access={access} view={view} setView={setView} sidebarOpen={sidebarOpen} />
 
         {/* Logout */}
         <div className="p-3 border-t border-white/10">

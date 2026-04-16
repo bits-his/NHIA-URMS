@@ -23,12 +23,14 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 const inputCls = "w-full pl-3 pr-3 h-11 rounded-xl border border-[#d4e8dc] bg-[#f4f7f5] text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-[#25a872] focus:border-[#25a872] outline-none transition-all";
-const EMPTY = { name: "", email: "", password: "", role: "state-officer", zone_id: "", state_id: "", is_active: true };
+const EMPTY = { name: "", email: "", password: "", role: "state-officer", zone_id: "", state_id: "", department_id: "", unit_id: "", is_active: true };
 
 export default function AdminUsersPage({ showOverview = false }: { showOverview?: boolean }) {
   const [users, setUsers] = React.useState<AdminUser[]>([]);
   const [zones, setZones] = React.useState<ZonalOffice[]>([]);
   const [states, setStates] = React.useState<StateOffice[]>([]);
+  const [depts, setDepts] = React.useState<Department[]>([]);
+  const [formUnits, setFormUnits] = React.useState<Unit[]>([]);
   const [total, setTotal] = React.useState(0);
   const [pages, setPages] = React.useState(1);
   const [page, setPage] = React.useState(1);
@@ -72,21 +74,38 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
   React.useEffect(() => {
     zonesApi.list().then(r => setZones(r.data)).catch(() => {});
     statesApi.list().then(r => setStates(r.data)).catch(() => {});
+    departmentsApi.list().then(r => setDepts(r.data)).catch(() => {});
   }, []);
 
   const filteredStates = form.zone_id ? states.filter(s => String(s.zonal_id) === String(form.zone_id)) : states;
 
-  const openCreate = () => { setForm({ ...EMPTY }); setEditing(null); setModal("create"); };
-  const openEdit = (u: AdminUser) => {
+  // When dept changes in form, fetch its units
+  const handleDeptChange = async (deptId: string) => {
+    setForm(f => ({ ...f, department_id: deptId, unit_id: "" }));
+    setFormUnits([]);
+    if (!deptId) return;
+    try { const r = await unitsApi.list(Number(deptId)); setFormUnits(r.data); } catch { /* silent */ }
+  };
+
+  const openCreate = () => { setForm({ ...EMPTY }); setFormUnits([]); setEditing(null); setModal("create"); };
+  const openEdit = async (u: AdminUser) => {
     setEditing(u);
-    setForm({ name: u.name, email: u.email || "", password: "", role: u.role, zone_id: String(u.zone_id || ""), state_id: String(u.state_id || ""), is_active: u.is_active });
+    setForm({
+      name: u.name, email: u.email || "", password: "", role: u.role,
+      zone_id: String(u.zone_id || ""), state_id: String(u.state_id || ""),
+      department_id: String(u.department_id || ""), unit_id: String(u.unit_id || ""),
+      is_active: u.is_active,
+    });
+    if (u.department_id) {
+      try { const r = await unitsApi.list(u.department_id); setFormUnits(r.data); } catch { setFormUnits([]); }
+    } else { setFormUnits([]); }
     setModal("edit");
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     try {
-      const payload: any = { name: form.name, email: form.email || undefined, role: form.role, zone_id: form.zone_id ? Number(form.zone_id) : undefined, state_id: form.state_id ? Number(form.state_id) : undefined, is_active: form.is_active };
+      const payload: any = { name: form.name, email: form.email || undefined, role: form.role, zone_id: form.zone_id ? Number(form.zone_id) : undefined, state_id: form.state_id ? Number(form.state_id) : undefined, department_id: form.department_id ? Number(form.department_id) : undefined, unit_id: form.unit_id ? Number(form.unit_id) : undefined, is_active: form.is_active };
       if (form.password) payload.password = form.password;
       if (modal === "create") { if (!form.password) { toast.error("Password required"); setSaving(false); return; } await usersApi.create(payload); toast.success("User created"); }
       else if (editing) { await usersApi.update(editing.id, payload); toast.success("User updated"); }
@@ -227,6 +246,19 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
               <option value="">— None —</option>
               {filteredStates.map(s => <option key={s.id} value={s.id}>{s.code} – {s.description}</option>)}
             </select>
+          </Field>
+          <Field label="Department">
+            <select className={inputCls} value={form.department_id} onChange={e => handleDeptChange(e.target.value)}>
+              <option value="">— None —</option>
+              {depts.map(d => <option key={d.id} value={d.id}>{d.department_code} – {d.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Unit">
+            <select className={inputCls} value={form.unit_id} onChange={e => setForm(f => ({ ...f, unit_id: e.target.value }))} disabled={!form.department_id}>
+              <option value="">— None —</option>
+              {formUnits.map(u => <option key={u.id} value={u.id}>{u.unit_code} – {u.name}</option>)}
+            </select>
+            {!form.department_id && <p className="text-xs text-slate-400 mt-1">Select a department first</p>}
           </Field>
           {modal === "edit" && (
             <Field label="Status">

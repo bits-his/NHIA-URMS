@@ -31,6 +31,14 @@ const login = async (req, res, next) => {
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: "8h" });
 
     const { password: _pw, ...userData } = user.toJSON();
+
+    // Parse functionalities JSON string → array if needed
+    if (typeof userData.functionalities === "string") {
+      try { userData.functionalities = JSON.parse(userData.functionalities); }
+      catch { userData.functionalities = []; }
+    }
+    if (!Array.isArray(userData.functionalities)) userData.functionalities = [];
+
     res.json({ success: true, token, user: userData });
   } catch (err) {
     next(err);

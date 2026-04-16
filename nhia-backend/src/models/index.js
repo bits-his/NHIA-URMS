@@ -13,9 +13,11 @@ StateOffice.belongsTo(ZonalOffice, { foreignKey: "zonal_id", as: "zone" });
 Department.hasMany(Unit, { foreignKey: "department_id", as: "units" });
 Unit.belongsTo(Department, { foreignKey: "department_id", as: "department" });
 
-User.belongsTo(ZonalOffice, { foreignKey: "zone_id", as: "zone" });
-User.belongsTo(StateOffice, { foreignKey: "state_id", as: "state" });
-ZonalOffice.hasMany(User, { foreignKey: "zone_id", as: "users" });
-StateOffice.hasMany(User, { foreignKey: "state_id", as: "users" });
+User.belongsTo(ZonalOffice,  { foreignKey: "zone_id",       as: "zone"       });
+User.belongsTo(StateOffice,  { foreignKey: "state_id",      as: "state"      });
+User.belongsTo(Department,   { foreignKey: "department_id", as: "department" });
+User.belongsTo(Unit,         { foreignKey: "unit_id",       as: "unit"       });
+ZonalOffice.hasMany(User,  { foreignKey: "zone_id",       as: "users" });
+StateOffice.hasMany(User,  { foreignKey: "state_id",      as: "users" });
 
 module.exports = { AnnualReport, QuarterlyData, ZonalOffice, StateOffice, Department, Unit, User };

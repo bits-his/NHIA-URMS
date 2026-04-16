@@ -10,8 +10,14 @@ const paginate = (query) => {
   return { limit, offset: (page - 1) * limit, page };
 };
 
-const notFound = (res, entity) =>
-  res.status(404).json({ success: false, message: `${entity} not found` });
+// Helper: parse functionalities JSON on any user plain object
+const parseUserFunctionalities = (u) => {
+  if (typeof u.functionalities === "string") {
+    try { u.functionalities = JSON.parse(u.functionalities); } catch { u.functionalities = []; }
+  }
+  if (!Array.isArray(u.functionalities)) u.functionalities = [];
+  return u;
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // USERS
@@ -37,13 +43,25 @@ const listUsers = async (req, res, next) => {
       offset,
       attributes: { exclude: ["password"] },
       include: [
-        { association: "zone", attributes: ["id", "zonal_code", "description"] },
-        { association: "state", attributes: ["id", "code", "description"] },
+        { association: "zone",       attributes: ["id", "zonal_code", "description"] },
+        { association: "state",      attributes: ["id", "code", "description"] },
+        { association: "department", attributes: ["id", "department_code", "name"] },
+        { association: "unit",       attributes: ["id", "unit_code", "name"] },
       ],
       order: [["createdAt", "DESC"]],
     });
 
-    res.json({ success: true, data: rows, total: count, page, pages: Math.ceil(count / limit) });
+    // Parse functionalities JSON string → array for each row
+    const data = rows.map(r => {
+      const u = r.toJSON();
+      if (typeof u.functionalities === "string") {
+        try { u.functionalities = JSON.parse(u.functionalities); } catch { u.functionalities = []; }
+      }
+      if (!Array.isArray(u.functionalities)) u.functionalities = [];
+      return u;
+    });
+
+    res.json({ success: true, data, total: count, page, pages: Math.ceil(count / limit) });
   } catch (err) { next(err); }
 };
 
@@ -51,7 +69,7 @@ const getUser = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.id, {
       attributes: { exclude: ["password"] },
-      include: ["zone", "state"],
+      include: ["zone", "state", "department", "unit"],
     });
     if (!user) return notFound(res, "User");
     res.json({ success: true, data: user });
@@ -76,7 +94,7 @@ const generateStaffId = async (role) => {
 
 const createUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, zone_id, state_id } = req.body;
+    const { name, email, password, role, zone_id, state_id, department_id, unit_id } = req.body;
     if (!name || !password || !role) {
       return res.status(400).json({ success: false, message: "name, password, role required" });
     }
@@ -85,7 +103,7 @@ const createUser = async (req, res, next) => {
     }
     const staff_id = await generateStaffId(role);
     const hashed = await bcrypt.hash(password, 12);
-    const user = await User.create({ name, staff_id, email, password: hashed, role, zone_id, state_id });
+    const user = await User.create({ name, staff_id, email, password: hashed, role, zone_id, state_id, department_id, unit_id });
     const { password: _pw, ...data } = user.toJSON();
     res.status(201).json({ success: true, data });
   } catch (err) {
@@ -101,8 +119,8 @@ const updateUser = async (req, res, next) => {
     const user = await User.findByPk(req.params.id);
     if (!user) return notFound(res, "User");
 
-    const { name, email, role, zone_id, state_id, is_active, password } = req.body;
-    const updates = { name, email, role, zone_id, state_id, is_active };
+    const { name, email, role, zone_id, state_id, department_id, unit_id, is_active, password } = req.body;
+    const updates = { name, email, role, zone_id, state_id, department_id, unit_id, is_active };
     if (password) updates.password = await bcrypt.hash(password, 12);
 
     // Remove undefined keys
@@ -124,6 +142,26 @@ const deleteUser = async (req, res, next) => {
     if (!user) return notFound(res, "User");
     await user.destroy();
     res.json({ success: true, message: "User deleted" });
+  } catch (err) { next(err); }
+};
+
+const updatePrivileges = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) return notFound(res, "User");
+    const { access } = req.body;
+    if (!Array.isArray(access)) {
+      return res.status(400).json({ success: false, message: "access must be an array of {access_to, functionalities[]}" });
+    }
+    // Validate shape
+    for (const entry of access) {
+      if (typeof entry.access_to !== "string" || !Array.isArray(entry.functionalities)) {
+        return res.status(400).json({ success: false, message: "Each entry must have access_to (string) and functionalities (array)" });
+      }
+    }
+    await user.update({ functionalities: access });
+    const { password: _pw, ...data } = user.toJSON();
+    res.json({ success: true, data: parseUserFunctionalities(data) });
   } catch (err) { next(err); }
 };
 
@@ -332,9 +370,12 @@ const deleteUnit = async (req, res, next) => {
 };
 
 module.exports = {
-  listUsers, getUser, createUser, updateUser, deleteUser,
+  listUsers, getUser, createUser, updateUser, deleteUser, updatePrivileges,
   listZones, createZone, updateZone, deleteZone,
   listStates, createState, updateState, deleteState,
   listDepartments, createDepartment, updateDepartment, deleteDepartment,
   listUnits, createUnit, updateUnit, deleteUnit,
 };
+
+const notFound = (res, entity) =>
+  res.status(404).json({ success: false, message: `${entity} not found` });
