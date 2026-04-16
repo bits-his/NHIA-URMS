@@ -241,8 +241,9 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
                 <CardContent className="pt-4 pb-4">
                   <div className="flex flex-wrap gap-3 items-center">
                     <Select value={filterYear} onValueChange={setFilterYear}>
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="Year" />
+                      <SelectTrigger className="w-[120px]"
+                        displayValue={filterYear === "all" ? "All Years" : filterYear}>
+                        <SelectValue placeholder="All Years" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Years</SelectItem>
@@ -251,10 +252,9 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
                     </Select>
 
                     <Select value={filterMonth} onValueChange={setFilterMonth}>
-                      <SelectTrigger className="w-[140px]">
-                        <SelectValue placeholder="Month">
-                          {filterMonth === "all" ? "All Months" : MONTHS.find(m => m.v === filterMonth)?.l}
-                        </SelectValue>
+                      <SelectTrigger className="w-[140px]"
+                        displayValue={filterMonth === "all" ? "All Months" : (MONTHS.find(m => m.v === filterMonth)?.l ?? filterMonth)}>
+                        <SelectValue placeholder="All Months" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Months</SelectItem>
@@ -263,7 +263,8 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
                     </Select>
 
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="w-[140px]">
+                      <SelectTrigger className="w-[140px]"
+                        displayValue={filterStatus === "all" ? "All Statuses" : filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)}>
                         <SelectValue placeholder="All Statuses" />
                       </SelectTrigger>
                       <SelectContent>

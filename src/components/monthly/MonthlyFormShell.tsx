@@ -105,10 +105,9 @@ export default function MonthlyFormShell({
             <div className="space-y-2">
               <Label className="text-xs font-bold">Zone <span className="text-red-500">*</span></Label>
               <Select value={zoneId} onValueChange={setZoneId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Zone">
-                    {zoneId ? zones.find(z => String(z.id) === zoneId)?.description : "Select Zone"}
-                  </SelectValue>
+                <SelectTrigger className="w-full"
+                  displayValue={zoneId ? (zones.find(z => String(z.id) === zoneId)?.description ?? "Select Zone") : "Select Zone"}>
+                  <SelectValue placeholder="Select Zone" />
                 </SelectTrigger>
                 <SelectContent>{zones.map(z => <SelectItem key={z.id} value={String(z.id)}>{z.description}</SelectItem>)}</SelectContent>
               </Select>
@@ -116,10 +115,9 @@ export default function MonthlyFormShell({
             <div className="space-y-2">
               <Label className="text-xs font-bold">State <span className="text-red-500">*</span></Label>
               <Select value={stateId} onValueChange={setStateId} disabled={!zoneId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select State">
-                    {stateId ? states.find(s => String(s.id) === stateId)?.description : "Select State"}
-                  </SelectValue>
+                <SelectTrigger className="w-full"
+                  displayValue={stateId ? (states.find(s => String(s.id) === stateId)?.description ?? "Select State") : "Select State"}>
+                  <SelectValue placeholder="Select State" />
                 </SelectTrigger>
                 <SelectContent>{states.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.description}</SelectItem>)}</SelectContent>
               </Select>
@@ -127,17 +125,18 @@ export default function MonthlyFormShell({
             <div className="space-y-2">
               <Label className="text-xs font-bold">Year <span className="text-red-500">*</span></Label>
               <Select value={year} onValueChange={setYear}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Year" /></SelectTrigger>
+                <SelectTrigger className="w-full" displayValue={year || "Select Year"}>
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
                 <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-bold">Month <span className="text-red-500">*</span></Label>
               <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Month">
-                    {month ? MONTHS.find(m => m.v === month)?.l : "Select Month"}
-                  </SelectValue>
+                <SelectTrigger className="w-full"
+                  displayValue={month ? (MONTHS.find(m => m.v === month)?.l ?? "Select Month") : "Select Month"}>
+                  <SelectValue placeholder="Select Month" />
                 </SelectTrigger>
                 <SelectContent>{MONTHS.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}</SelectContent>
               </Select>

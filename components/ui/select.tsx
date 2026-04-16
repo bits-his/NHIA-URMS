@@ -71,9 +71,10 @@ interface SelectTriggerProps {
   className?: string;
   size?: "sm" | "default";
   id?: string;
+  displayValue?: string;
 }
 
-function SelectTrigger({ children, className, size = "default", id }: SelectTriggerProps) {
+function SelectTrigger({ children, className, size = "default", id, displayValue }: SelectTriggerProps) {
   const { value, open, setOpen, triggerRef } = useCtx();
 
   // Extract placeholder from SelectValue child
@@ -83,6 +84,9 @@ function SelectTrigger({ children, className, size = "default", id }: SelectTrig
       placeholder = (child.props as any).placeholder ?? placeholder;
     }
   });
+
+  // Use displayValue if provided, otherwise fall back to raw value
+  const shown = displayValue ?? (value ? value : placeholder);
 
   return (
     <button
@@ -102,7 +106,7 @@ function SelectTrigger({ children, className, size = "default", id }: SelectTrig
       )}
     >
       <span className={cn("flex-1 truncate", !value && "text-slate-400")}>
-        {value ? value : placeholder}
+        {shown}
       </span>
       <ChevronDown className={cn(
         "w-4 h-4 text-[#1a7a52] shrink-0 transition-transform duration-200",
