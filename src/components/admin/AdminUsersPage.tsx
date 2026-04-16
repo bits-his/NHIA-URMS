@@ -1,12 +1,13 @@
 import * as React from "react";
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, TrendingUp, ChevronDown, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { usersApi, zonesApi, statesApi, departmentsApi, unitsApi, type AdminUser, type ZonalOffice, type StateOffice } from "@/lib/adminApi";
+import { usersApi, zonesApi, statesApi, departmentsApi, unitsApi, type AdminUser, type ZonalOffice, type StateOffice, type Department, type Unit } from "@/lib/adminApi";
 import AdminModal from "./AdminModal";
+import { MODULE_CONFIG } from "@/src/access/moduleConfig";
 
 const ROLES = ["state-officer", "zonal-director", "sdo", "hq-department", "dg-ceo", "admin"] as const;
 const ROLE_LABELS: Record<string, string> = {
@@ -23,12 +24,14 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 const inputCls = "w-full pl-3 pr-3 h-11 rounded-xl border border-[#d4e8dc] bg-[#f4f7f5] text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-[#25a872] focus:border-[#25a872] outline-none transition-all";
-const EMPTY = { name: "", email: "", password: "", role: "state-officer", zone_id: "", state_id: "", is_active: true };
+const EMPTY = { name: "", email: "", password: "", role: "state-officer", zone_id: "", state_id: "", department_id: "", unit_id: "", is_active: true };
 
 export default function AdminUsersPage({ showOverview = false }: { showOverview?: boolean }) {
   const [users, setUsers] = React.useState<AdminUser[]>([]);
   const [zones, setZones] = React.useState<ZonalOffice[]>([]);
   const [states, setStates] = React.useState<StateOffice[]>([]);
+  const [depts, setDepts] = React.useState<Department[]>([]);
+  const [formUnits, setFormUnits] = React.useState<Unit[]>([]);
   const [total, setTotal] = React.useState(0);
   const [pages, setPages] = React.useState(1);
   const [page, setPage] = React.useState(1);
@@ -40,6 +43,7 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
   const [editing, setEditing] = React.useState<AdminUser | null>(null);
   const [form, setForm] = React.useState({ ...EMPTY });
   const [saving, setSaving] = React.useState(false);
+  const [granted, setGranted] = React.useState<Set<string>>(new Set());
 
   // Overview stats
   const [stats, setStats] = React.useState<{ label: string; value: number; tint: string; iconColor: string; icon: React.ReactNode }[]>([]);
@@ -72,24 +76,82 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
   React.useEffect(() => {
     zonesApi.list().then(r => setZones(r.data)).catch(() => {});
     statesApi.list().then(r => setStates(r.data)).catch(() => {});
+    departmentsApi.list().then(r => setDepts(r.data)).catch(() => {});
   }, []);
 
   const filteredStates = form.zone_id ? states.filter(s => String(s.zonal_id) === String(form.zone_id)) : states;
 
-  const openCreate = () => { setForm({ ...EMPTY }); setEditing(null); setModal("create"); };
-  const openEdit = (u: AdminUser) => {
+  // When dept changes in form, fetch its units
+  const handleDeptChange = async (deptId: string) => {
+    setForm(f => ({ ...f, department_id: deptId, unit_id: "" }));
+    setFormUnits([]);
+    if (!deptId) return;
+    try { const r = await unitsApi.list(Number(deptId)); setFormUnits(r.data); } catch { /* silent */ }
+  };
+
+  const openCreate = () => { setForm({ ...EMPTY }); setFormUnits([]); setGranted(new Set()); setEditing(null); setModal("create"); };
+  const openEdit = async (u: AdminUser) => {
     setEditing(u);
-    setForm({ name: u.name, email: u.email || "", password: "", role: u.role, zone_id: String(u.zone_id || ""), state_id: String(u.state_id || ""), is_active: u.is_active });
+    setForm({
+      name: u.name, email: u.email || "", password: "", role: u.role,
+      zone_id: String(u.zone_id || ""), state_id: String(u.state_id || ""),
+      department_id: String(u.department_id || ""), unit_id: String(u.unit_id || ""),
+      is_active: u.is_active,
+    });
+    // Load existing access into granted set
+    const keys = new Set<string>();
+    const accessArr = Array.isArray(u.functionalities) ? u.functionalities : [];
+    accessArr.forEach((entry: any) => {
+      if (!entry?.access_to) return;
+      keys.add(entry.access_to);
+      const mod = MODULE_CONFIG.find(m => m.title === entry.access_to);
+      if (mod && Array.isArray(entry.functionalities)) {
+        entry.functionalities.forEach((funcTitle: string) => {
+          const child = mod.children.find(c => c.title === funcTitle);
+          if (child) keys.add(child.path);
+        });
+      }
+    });
+    setGranted(keys);
+    if (u.department_id) {
+      try { const r = await unitsApi.list(u.department_id); setFormUnits(r.data); } catch { setFormUnits([]); }
+    } else { setFormUnits([]); }
     setModal("edit");
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     try {
-      const payload: any = { name: form.name, email: form.email || undefined, role: form.role, zone_id: form.zone_id ? Number(form.zone_id) : undefined, state_id: form.state_id ? Number(form.state_id) : undefined, is_active: form.is_active };
+      // Build structured access array from granted set
+      const access = MODULE_CONFIG
+        .filter(mod => granted.has(mod.title))
+        .map(mod => ({
+          access_to: mod.title,
+          functionalities: mod.children
+            .filter(c => granted.has(c.path))
+            .map(c => c.title),
+        }));
+
+      const payload: any = {
+        name: form.name, email: form.email || undefined, role: form.role,
+        zone_id: form.zone_id ? Number(form.zone_id) : undefined,
+        state_id: form.state_id ? Number(form.state_id) : undefined,
+        department_id: form.department_id ? Number(form.department_id) : undefined,
+        unit_id: form.unit_id ? Number(form.unit_id) : undefined,
+        is_active: form.is_active,
+        access,
+      };
       if (form.password) payload.password = form.password;
-      if (modal === "create") { if (!form.password) { toast.error("Password required"); setSaving(false); return; } await usersApi.create(payload); toast.success("User created"); }
-      else if (editing) { await usersApi.update(editing.id, payload); toast.success("User updated"); }
+      if (modal === "create") {
+        if (!form.password) { toast.error("Password required"); setSaving(false); return; }
+        await usersApi.create(payload);
+        toast.success("User created");
+      } else if (editing) {
+        await usersApi.update(editing.id, payload);
+        // Also update privileges separately to ensure access is saved
+        await usersApi.updatePrivileges(editing.id, access);
+        toast.success("User updated");
+      }
       setModal(null); load();
     } catch (e: any) { toast.error(e.message); }
     finally { setSaving(false); }
@@ -99,6 +161,26 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
     if (!confirm(`Delete user "${u.name}"?`)) return;
     try { await usersApi.delete(u.id); toast.success("User deleted"); load(); }
     catch (e: any) { toast.error(e.message); }
+  };
+
+  const toggleParent = (title: string, childPaths: string[]) => {
+    setGranted(prev => {
+      const next = new Set(prev);
+      if (next.has(title)) { next.delete(title); childPaths.forEach(p => next.delete(p)); }
+      else { next.add(title); childPaths.forEach(p => next.add(p)); }
+      return next;
+    });
+  };
+
+  const toggleChild = (parentTitle: string, childPath: string, allChildPaths: string[]) => {
+    setGranted(prev => {
+      const next = new Set(prev);
+      if (next.has(childPath)) {
+        next.delete(childPath);
+        if (allChildPaths.filter(p => p !== childPath && next.has(p)).length === 0) next.delete(parentTitle);
+      } else { next.add(childPath); next.add(parentTitle); }
+      return next;
+    });
   };
 
   return (
@@ -201,41 +283,97 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
         )}
       </Card>
 
-      <AdminModal title={modal === "create" ? "Add New User" : "Edit User"} open={modal !== null} onClose={() => setModal(null)}>
-        <form onSubmit={handleSave} className="space-y-4">
-          <Field label="Full Name" required><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></Field>
-          {modal === "create" && (
-            <p className="text-xs text-slate-400 -mt-2">Staff ID will be auto-generated based on role (e.g. SO-0001, ZD-0001)</p>
-          )}
-          <Field label="Email"><input type="email" className={inputCls} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></Field>
-          <Field label={modal === "create" ? "Password" : "New Password (leave blank to keep)"} required={modal === "create"}>
-            <input type="password" className={inputCls} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required={modal === "create"} />
-          </Field>
-          <Field label="Role" required>
-            <select className={inputCls} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} required>
-              {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-            </select>
-          </Field>
-          <Field label="Zone">
-            <select className={inputCls} value={form.zone_id} onChange={e => setForm(f => ({ ...f, zone_id: e.target.value, state_id: "" }))}>
-              <option value="">— None —</option>
-              {zones.map(z => <option key={z.id} value={z.id}>{z.zonal_code} – {z.description}</option>)}
-            </select>
-          </Field>
-          <Field label="State">
-            <select className={inputCls} value={form.state_id} onChange={e => setForm(f => ({ ...f, state_id: e.target.value }))}>
-              <option value="">— None —</option>
-              {filteredStates.map(s => <option key={s.id} value={s.id}>{s.code} – {s.description}</option>)}
-            </select>
-          </Field>
-          {modal === "edit" && (
-            <Field label="Status">
-              <select className={inputCls} value={form.is_active ? "1" : "0"} onChange={e => setForm(f => ({ ...f, is_active: e.target.value === "1" }))}>
-                <option value="1">Active</option><option value="0">Inactive</option>
-              </select>
-            </Field>
-          )}
-          <div className="flex justify-end gap-3 pt-2">
+      <AdminModal title={modal === "create" ? "Add New User" : "Edit User"} open={modal !== null} onClose={() => setModal(null)} width="max-w-4xl">
+        <form onSubmit={handleSave}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* ── Left: User details ── */}
+            <div className="space-y-4">
+              <Field label="Full Name" required><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></Field>
+              {modal === "create" && (
+                <p className="text-xs text-slate-400 -mt-2">Staff ID will be auto-generated based on role (e.g. SO-0001, ZD-0001)</p>
+              )}
+              <Field label="Email"><input type="email" className={inputCls} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></Field>
+              <Field label={modal === "create" ? "Password" : "New Password (leave blank to keep)"} required={modal === "create"}>
+                <input type="password" className={inputCls} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required={modal === "create"} />
+              </Field>
+              <Field label="Role" required>
+                <select className={inputCls} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} required>
+                  {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                </select>
+              </Field>
+              <Field label="Zone">
+                <select className={inputCls} value={form.zone_id} onChange={e => setForm(f => ({ ...f, zone_id: e.target.value, state_id: "" }))}>
+                  <option value="">— None —</option>
+                  {zones.map(z => <option key={z.id} value={z.id}>{z.zonal_code} – {z.description}</option>)}
+                </select>
+              </Field>
+              <Field label="State">
+                <select className={inputCls} value={form.state_id} onChange={e => setForm(f => ({ ...f, state_id: e.target.value }))}>
+                  <option value="">— None —</option>
+                  {filteredStates.map(s => <option key={s.id} value={s.id}>{s.code} – {s.description}</option>)}
+                </select>
+              </Field>
+              <Field label="Department">
+                <select className={inputCls} value={form.department_id} onChange={e => handleDeptChange(e.target.value)}>
+                  <option value="">— None —</option>
+                  {depts.map(d => <option key={d.id} value={d.id}>{d.department_code} – {d.name}</option>)}
+                </select>
+              </Field>
+              <Field label="Unit">
+                <select className={inputCls} value={form.unit_id} onChange={e => setForm(f => ({ ...f, unit_id: e.target.value }))} disabled={!form.department_id}>
+                  <option value="">— None —</option>
+                  {formUnits.map(u => <option key={u.id} value={u.id}>{u.unit_code} – {u.name}</option>)}
+                </select>
+                {!form.department_id && <p className="text-xs text-slate-400 mt-1">Select a department first</p>}
+              </Field>
+              {modal === "edit" && (
+                <Field label="Status">
+                  <select className={inputCls} value={form.is_active ? "1" : "0"} onChange={e => setForm(f => ({ ...f, is_active: e.target.value === "1" }))}>
+                    <option value="1">Active</option><option value="0">Inactive</option>
+                  </select>
+                </Field>
+              )}
+            </div>
+
+            {/* ── Right: Module Access ── */}
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#145c3f]" /> Module Access
+                </label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => {
+                    const all = new Set<string>();
+                    MODULE_CONFIG.forEach(m => { all.add(m.title); m.children.forEach(c => all.add(c.path)); });
+                    setGranted(all);
+                  }} className="text-[10px] text-[#145c3f] hover:underline font-medium">All</button>
+                  <span className="text-slate-300 text-[10px]">|</span>
+                  <button type="button" onClick={() => setGranted(new Set())} className="text-[10px] text-rose-500 hover:underline font-medium">None</button>
+                </div>
+              </div>
+              <div className="space-y-1.5 overflow-y-auto flex-1 pr-1" style={{ maxHeight: "420px" }}>
+                {MODULE_CONFIG.map(mod => {
+                  const allChildPaths = mod.children.map(c => c.path);
+                  const parentChecked = granted.has(mod.title);
+                  const checkedCount = allChildPaths.filter(p => granted.has(p)).length;
+                  const someChecked = parentChecked && checkedCount < allChildPaths.length;
+                  return (
+                    <ModuleAccessRow
+                      key={mod.title}
+                      mod={mod}
+                      parentChecked={parentChecked}
+                      someChecked={someChecked}
+                      granted={granted}
+                      onToggleParent={toggleParent}
+                      onToggleChild={toggleChild}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-[#d4e8dc]">
             <Button type="button" variant="ghost" onClick={() => setModal(null)} className="rounded-xl text-slate-600">Cancel</Button>
             <Button type="submit" disabled={saving} className="bg-[#145c3f] hover:bg-[#0f3d2e] text-white rounded-xl">
               {saving ? "Saving..." : modal === "create" ? "Create User" : "Save Changes"}
@@ -254,6 +392,53 @@ function Field({ label, required, children }: { label: string; required?: boolea
         {label}{required && <span className="text-rose-500 ml-0.5">*</span>}
       </label>
       {children}
+    </div>
+  );
+}
+
+function ModuleAccessRow({ mod, parentChecked, someChecked, granted, onToggleParent, onToggleChild }: {
+  mod: typeof MODULE_CONFIG[0];
+  parentChecked: boolean;
+  someChecked: boolean;
+  granted: Set<string>;
+  onToggleParent: (title: string, childPaths: string[]) => void;
+  onToggleChild: (parentTitle: string, childPath: string, allChildPaths: string[]) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const allChildPaths = mod.children.map(c => c.path);
+  const parentRef = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => { if (parentRef.current) parentRef.current.indeterminate = someChecked; }, [someChecked]);
+
+  return (
+    <div className={`rounded-xl border transition-all ${parentChecked ? "border-[#25a872]" : "border-[#d4e8dc]"}`}>
+      <div className={`flex items-center gap-2.5 px-3 py-2 rounded-xl ${parentChecked ? "bg-[#e8f5ee]" : "bg-white"}`}>
+        <input ref={parentRef} type="checkbox" checked={parentChecked}
+          onChange={() => onToggleParent(mod.title, allChildPaths)}
+          className="w-3.5 h-3.5 accent-[#145c3f] shrink-0 cursor-pointer" />
+        <span className={`text-xs font-semibold flex-1 ${parentChecked ? "text-[#145c3f]" : "text-slate-700"}`}>{mod.title}</span>
+        {mod.children.length > 0 && (
+          <button type="button" onClick={() => setOpen(o => !o)} className="p-0.5 text-slate-400 hover:text-slate-600">
+            {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </button>
+        )}
+      </div>
+      {open && mod.children.length > 0 && (
+        <div className="border-t border-[#d4e8dc] px-3 py-1.5 space-y-1 bg-white rounded-b-xl">
+          {!parentChecked && <p className="text-[10px] text-amber-600 italic">Enable parent first</p>}
+          {mod.children.map(child => (
+            <label key={child.path} className={`flex items-center gap-2 px-1.5 py-1 rounded-lg cursor-pointer ${
+              granted.has(child.path) ? "bg-[#e8f5ee]" : "hover:bg-slate-50"
+            } ${!parentChecked ? "opacity-40 pointer-events-none" : ""}`}>
+              <input type="checkbox" checked={granted.has(child.path)} disabled={!parentChecked}
+                onChange={() => onToggleChild(mod.title, child.path, allChildPaths)}
+                className="w-3 h-3 accent-[#145c3f] shrink-0" />
+              <span className={`text-xs ${granted.has(child.path) ? "text-[#145c3f] font-medium" : "text-slate-600"}`}>
+                {child.title}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

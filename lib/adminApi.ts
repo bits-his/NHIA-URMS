@@ -29,8 +29,10 @@ export type Role = "admin" | "state-officer" | "zonal-director" | "sdo" | "hq-de
 
 export interface AdminUser {
   id: number; name: string; staff_id: string; email?: string;
-  role: Role; zone_id?: number; state_id?: number;
-  is_active: boolean; zone?: ZonalOffice; state?: StateOffice;
+  role: Role; zone_id?: number; state_id?: number; department_id?: number; unit_id?: number;
+  /** Structured access — array of {access_to, functionalities[]} */
+  functionalities?: { access_to: string; functionalities: string[] }[];
+  is_active: boolean; zone?: ZonalOffice; state?: StateOffice; department?: Department; unit?: Unit;
   createdAt: string;
 }
 export interface ZonalOffice { id: number; zonal_code: string; description: string; states?: StateOffice[]; }
@@ -65,6 +67,10 @@ export const usersApi = {
     request<{ success: boolean; data: AdminUser }>("/admin/users", { method: "POST", body: JSON.stringify(body) }),
   update: (id: number, body: Partial<AdminUser> & { password?: string }) =>
     request<{ success: boolean; data: AdminUser }>(`/admin/users/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  updatePrivileges: (id: number, access: { access_to: string; functionalities: string[] }[]) =>
+    request<{ success: boolean; data: AdminUser }>(`/admin/users/${id}/privileges`, {
+      method: "PATCH", body: JSON.stringify({ access }),
+    }),
   delete: (id: number) =>
     request<{ success: boolean; message: string }>(`/admin/users/${id}`, { method: "DELETE" }),
 };

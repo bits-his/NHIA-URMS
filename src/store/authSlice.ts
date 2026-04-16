@@ -1,23 +1,20 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import type { AccessEntry } from "./types";
 
 export type UserRole =
-  | "Admin"
-  | "State Officer"
-  | "Zonal Director"
-  | "SDO"
-  | "HQ Department"
-  | "DG-CEO";
+  | "Admin" | "State Officer" | "Zonal Director"
+  | "SDO"   | "HQ Department" | "DG-CEO";
 
 export interface AuthUser {
   id: number;
   name: string;
   staff_id: string;
   email?: string;
-  role: UserRole;
-  /** Comma-separated list of allowed modules e.g. "Dashboard,Underwriting,Claims" */
-  functionalities: string;
+  role: string;
+  /** Structured access permissions */
+  access?: AccessEntry[];
+  /** Legacy flat string — kept for backward compat during migration */
+  functionalities?: string;
   zone_id?: number;
   state_id?: number;
 }

@@ -35,11 +35,13 @@ import StockVerificationsList from "./StockVerificationsList";
 import StockAssetManager from "./StockAssetManager";
 import SidebarNav from "./SidebarNav";
 import AdminSettingsPage from "./admin/AdminSettingsPage";
+import ZonalDirectorDashboard from "./ZonalDirectorDashboard";
+import StateOfficeDashboard from "./StateOfficeDashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-director" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
-type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "stock-verification" | "stock-verifications-list" | "stock-assets" | "settings";
-interface DashboardProps { role: Role; onLogout: () => void; }
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verification" | "stock-verifications-list" | "stock-assets";
+interface DashboardProps { role: Role; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const CHART_DATA = [
@@ -374,13 +376,12 @@ function AuditPanel() {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-export default function Dashboard({ role, onLogout }: DashboardProps) {
+export default function Dashboard({ role, access = [], functionalities = "", onLogout }: DashboardProps) {
   const [view, setView] = React.useState<View>(role === "admin" ? "home" : "home");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [selectedReportRef, setSelectedReportRef] = React.useState<string | null>(null);
   const [selectedVerifId, setSelectedVerifId] = React.useState<number | null>(null);
   const userInfo = getUserInfo(role);
-  const menuItems = getMenuItems(role, view, setView);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f4f7f5]">
@@ -417,7 +418,7 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
         )}
 
         {/* Nav */}
-        <SidebarNav role={role} view={view} setView={setView} sidebarOpen={sidebarOpen} />
+        <SidebarNav role={role} access={access} view={view} setView={(v) => setView(v as View)} sidebarOpen={sidebarOpen} />
 
         {/* Logout */}
         <div className="p-3 border-t border-white/10">
@@ -450,7 +451,7 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
               <p className="text-sm font-bold text-slate-800 leading-tight">
                 {view === "home" ? "Dashboard Overview" : view === "report-entry" ? "Submit Report" : view === "zonal-review" ? "Review Reports" : "Dashboard"}
               </p>
-              <p className="text-[10px] text-slate-400">NHIA Underwriting & Risk Management System</p>
+              <p className="text-[10px] text-slate-400">NHIA Reporting Management Dashboard</p>
             </div>
           </div>
 
@@ -511,7 +512,7 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
                     <h1 className="text-xl font-black text-slate-900 tracking-tight">
                       Good morning, {userInfo.initials} 👋
                     </h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Here's your NHIA URMS overview for today.</p>
+                    <p className="text-sm text-slate-500 mt-0.5">Here's your NHIA Reporting Management Dashboard overview for today.</p>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" className="h-9 text-xs rounded-xl border-[#d4e8dc] hover:bg-[#e8f5ee] gap-1.5">
@@ -525,8 +526,8 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
                   </div>
                 </div>
 
-                {/* KPI row — hidden for SDO (has its own KPIs) */}
-                {role !== "sdo" && (
+                {/* KPI row — hidden for SDO, Zonal Director, and State Officer (have their own KPIs) */}
+                {role !== "sdo" && role !== "zonal-director" && role !== "state-officer" && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <KPICard title="Reports Submitted" value="124" trend="+12%" trendUp icon={<FileText className="w-5 h-5 text-blue-600" />} tint="kpi-blue" sub="This month" />
                   <KPICard title="Pending Review"    value="18"  trend="-5%"  icon={<Clock className="w-5 h-5 text-amber-600" />}  tint="kpi-amber" sub="Awaiting action" />
@@ -537,9 +538,28 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
 
                 {/* Main grid */}
                 {role === "sdo" ? (
-                  /* SDO: full-width performance dashboard, no sidebar cards */
+                  /* SDO: full-width performance dashboard */
                   <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                     <SDOPerformance />
+                  </motion.div>
+                ) : role === "zonal-director" ? (
+                  /* Zonal Director: zone + state drill-down dashboard */
+                  <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                    <ZonalDirectorDashboard
+                      zoneName="South West"
+                      onReviewReports={() => setView("zonal-review")}
+                    />
+                  </motion.div>
+                ) : role === "state-officer" ? (
+                  /* State Officer: state performance + department drill-down */
+                  <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                    <StateOfficeDashboard
+                      stateName="Lagos"
+                      zoneName="South West"
+                      onNewReport={() => setView("report-entry")}
+                      onAnnualReport={() => setView("annual-report")}
+                      onViewSubmissions={() => setView("annual-reports-list")}
+                    />
                   </motion.div>
                 ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -594,8 +614,6 @@ export default function Dashboard({ role, onLogout }: DashboardProps) {
 
                     {/* Role panel */}
                     <motion.div key={role} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                      {role === "state-officer"  && <StateOfficerPanel onNewReport={() => setView("report-entry")} onAnnualReport={() => setView("annual-report")} onViewSubmissions={() => setView("annual-reports-list")} />}
-                      {role === "zonal-director" && <ZonalDirectorPanel onReviewReports={() => setView("zonal-review")} />}
                       {role === "dg-ceo"         && <DGCEOPanel />}
                       {role === "hq-department"  && <HQPanel />}
                       {role === "audit"          && <AuditPanel />}

@@ -26,7 +26,27 @@ const User = sequelize.define(
       onDelete: "SET NULL",
       onUpdate: "CASCADE",
     },
+    department_id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+      references: { model: "departments", key: "id" },
+      onDelete: "SET NULL",
+      onUpdate: "CASCADE",
+    },
+    unit_id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+      references: { model: "units", key: "id" },
+      onDelete: "SET NULL",
+      onUpdate: "CASCADE",
+    },
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    functionalities: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: [],
+      comment: "Array of {access_to, functionalities[]} objects",
+    },
   },
   { tableName: "users", modelName: "User" }
 );
