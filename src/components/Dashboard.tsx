@@ -45,10 +45,11 @@ import SidebarNav from "./SidebarNav";
 import AdminSettingsPage from "./admin/AdminSettingsPage";
 import ZonalDirectorDashboard from "./ZonalDirectorDashboard";
 import StateOfficeDashboard from "./StateOfficeDashboard";
+import ReportReviewPage from "./ReportReviewPage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-coordinator" | "state-coordinator" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
-type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verification" | "stock-verifications-list" | "stock-assets" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list";
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verification" | "stock-verifications-list" | "stock-assets" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review";
 interface DashboardProps { role: Role; user?: import("@/src/store/authSlice").AuthUser; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -459,7 +460,7 @@ export default function Dashboard({ role, user, access = [], functionalities = "
             <Separator orientation="vertical" className="h-5 bg-[#d4e8dc]" />
             <div>
               <p className="text-sm font-bold text-slate-800 leading-tight">
-                {view === "home" ? "Dashboard Overview" : view === "report-entry" ? "Submit Report" : view === "zonal-review" ? "Review Reports" : "Dashboard"}
+                {view === "home" ? "Dashboard Overview" : view === "report-entry" ? "Submit Report" : view === "zonal-review" ? "Review Reports" : view === "report-review" ? "Report Review" : "Dashboard"}
               </p>
               <p className="text-[10px] text-slate-400">NHIA Reporting Management Dashboard</p>
             </div>
@@ -789,8 +790,9 @@ export default function Dashboard({ role, user, access = [], functionalities = "
               />
             ) : view === "settings" ? (
               <AdminSettingsPage />
-            ) : (
-              <ZonalCompose onBack={() => setView("zonal-review")} onForward={() => setView("home")} />
+            ) : view === "report-review" ? (
+              <ReportReviewPage role={role} onBack={() => setView("home")} />
+            ) : (              <ZonalCompose onBack={() => setView("zonal-review")} onForward={() => setView("home")} />
             )}
           </AnimatePresence>
         </main>

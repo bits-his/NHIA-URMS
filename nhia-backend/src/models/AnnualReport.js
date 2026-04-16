@@ -64,7 +64,7 @@ const AnnualReport = sequelize.define(
     },
     // ── Meta ─────────────────────────────────────────────────────────────────
     status: {
-      type: DataTypes.ENUM("draft", "submitted", "under_review", "approved", "rejected"),
+      type: DataTypes.ENUM("draft", "submitted", "under_review", "zonal_review", "approved", "rejected"),
       allowNull: false,
       defaultValue: "draft",
     },
@@ -72,6 +72,19 @@ const AnnualReport = sequelize.define(
       type: DataTypes.STRING(100),
       allowNull: true,
     },
+    // ── Approval chain audit ──────────────────────────────────────────────────
+    state_reviewed_by: { type: DataTypes.STRING(100), allowNull: true },
+    state_reviewed_at: { type: DataTypes.DATE,        allowNull: true },
+    state_review_note: { type: DataTypes.TEXT,        allowNull: true },
+    zonal_reviewed_by: { type: DataTypes.STRING(100), allowNull: true },
+    zonal_reviewed_at: { type: DataTypes.DATE,        allowNull: true },
+    zonal_review_note: { type: DataTypes.TEXT,        allowNull: true },
+    sdo_reviewed_by:   { type: DataTypes.STRING(100), allowNull: true },
+    sdo_reviewed_at:   { type: DataTypes.DATE,        allowNull: true },
+    sdo_review_note:   { type: DataTypes.TEXT,        allowNull: true },
+    rejection_reason:  { type: DataTypes.TEXT,        allowNull: true },
+    rejected_by:       { type: DataTypes.STRING(100), allowNull: true },
+    rejected_at:       { type: DataTypes.DATE,        allowNull: true },
   },
   {
     tableName: "annual_reports",

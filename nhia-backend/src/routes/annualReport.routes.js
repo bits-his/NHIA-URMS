@@ -1,18 +1,24 @@
 const { Router } = require("express");
 const { body } = require("express-validator");
 const { validate } = require("../middleware/validate");
+const { authenticate, authorize } = require("../middleware/auth");
 const {
   createReport,
   listReports,
   getReport,
   updateReport,
+  approveReport,
+  rejectReport,
   updateStatus,
   deleteReport,
 } = require("../controllers/annualReport.controller");
 
 const router = Router();
 
-// ─── Shared validation rules ──────────────────────────────────────────────────
+// All routes require authentication
+router.use(authenticate);
+
+// ─── Validation rules ─────────────────────────────────────────────────────────
 
 const reportRules = [
   body("general.year")
@@ -31,15 +37,53 @@ const reportRules = [
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-router.get("/",                                          listReports);
-router.get("/:referenceId",                              getReport);
-router.post("/",          reportRules, validate,         createReport);
-router.put("/:referenceId", reportRules, validate,       updateReport);
+// List — role-scoped in controller
+router.get("/", listReports);
+
+// Single report
+router.get("/:referenceId", getReport);
+
+// Create — state officers and state coordinators can submit
+router.post("/",
+  authorize("state-officer", "state-coordinator", "admin"),
+  reportRules, validate,
+  createReport
+);
+
+// Update — only on draft/rejected reports
+router.put("/:referenceId",
+  authorize("state-officer", "state-coordinator", "admin"),
+  reportRules, validate,
+  updateReport
+);
+
+// ── Approval chain ────────────────────────────────────────────────────────────
+
+// Approve: state-coordinator → under_review, zonal-coordinator → zonal_review, sdo → approved
+router.patch("/:referenceId/approve",
+  authorize("state-coordinator", "zonal-coordinator", "sdo", "admin"),
+  body("note").optional().isString(),
+  validate,
+  approveReport
+);
+
+// Reject: any reviewer can reject with a reason
+router.patch("/:referenceId/reject",
+  authorize("state-coordinator", "zonal-coordinator", "sdo", "admin"),
+  body("reason").notEmpty().withMessage("Rejection reason is required"),
+  validate,
+  rejectReport
+);
+
+// Generic status override — admin only
 router.patch("/:referenceId/status",
+  authorize("admin"),
   body("status").notEmpty().withMessage("Status is required"),
   validate,
   updateStatus
 );
-router.delete("/:referenceId",                           deleteReport);
+
+// Delete — admin only
+router.delete("/:referenceId", authorize("admin"), deleteReport);
 
 module.exports = router;

@@ -3,6 +3,28 @@ const { FinanceMonthlyReport, ProgrammesMonthlyReport, SqaMonthlyReport, StateOf
 
 const MONTH_NAMES = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+// ─── Approval chain ───────────────────────────────────────────────────────────
+const CHAIN = {
+  "state-coordinator": {
+    requiredStatus: "submitted",
+    approveStatus:  "under_review",
+    auditApprove:   (actor) => ({ state_reviewed_by: actor, state_reviewed_at: new Date() }),
+    auditReject:    (actor, reason) => ({ rejected_by: actor, rejected_at: new Date(), rejection_reason: reason }),
+  },
+  "zonal-coordinator": {
+    requiredStatus: "under_review",
+    approveStatus:  "zonal_review",
+    auditApprove:   (actor) => ({ zonal_reviewed_by: actor, zonal_reviewed_at: new Date() }),
+    auditReject:    (actor, reason) => ({ rejected_by: actor, rejected_at: new Date(), rejection_reason: reason }),
+  },
+  "sdo": {
+    requiredStatus: "zonal_review",
+    approveStatus:  "approved",
+    auditApprove:   (actor) => ({}),  // no extra audit field for sdo on monthly
+    auditReject:    (actor, reason) => ({ rejected_by: actor, rejected_at: new Date(), rejection_reason: reason }),
+  },
+};
+
 // ── Reference ID generator ────────────────────────────────────────────────────
 const genRefId = async (Model, prefix, t) => {
   const year = new Date().getFullYear();
@@ -10,7 +32,7 @@ const genRefId = async (Model, prefix, t) => {
   return `${prefix}-${year}-${String(count + 1).padStart(5, "0")}`;
 };
 
-// ── Generic CRUD factory ──────────────────────────────────────────────────────
+// ── Generic CRUD + approval factory ──────────────────────────────────────────
 const makeController = (Model, prefix) => ({
 
   create: async (req, res, next) => {
@@ -18,7 +40,8 @@ const makeController = (Model, prefix) => ({
     try {
       const reference_id = await genRefId(Model, prefix, t);
       const record = await Model.create(
-        { reference_id, ...req.body, status: req.body.status || "draft" },
+        { reference_id, ...req.body, status: req.body.status || "draft",
+          submitted_by: req.body.submitted_by || req.user?.name || null },
         { transaction: t }
       );
       await t.commit();
@@ -29,11 +52,29 @@ const makeController = (Model, prefix) => ({
   list: async (req, res, next) => {
     try {
       const where = {};
+      const role = req.user?.role;
+
       if (req.query.state_id) where.state_id = req.query.state_id;
       if (req.query.year)     where.reporting_year  = req.query.year;
       if (req.query.month)    where.reporting_month = req.query.month;
       if (req.query.status)   where.status = req.query.status;
       if (req.query.section)  where.section = req.query.section;
+
+      // Role-based scoping
+      if ((role === "state-officer" || role === "state-coordinator") && req.user.state_id && !req.query.state_id) {
+        where.state_id = req.user.state_id;
+        if (role === "state-coordinator" && !req.query.status) {
+          where.status = ["submitted", "under_review", "zonal_review", "approved", "rejected"];
+        }
+      } else if (role === "zonal-coordinator" && req.user.zone_id && !req.query.state_id) {
+        const zoneStates = await StateOffice.findAll({ where: { zonal_id: req.user.zone_id }, attributes: ["id"] });
+        const stateIds = zoneStates.map(s => s.id);
+        if (stateIds.length) where.state_id = stateIds;
+        if (!req.query.status) where.status = ["under_review", "zonal_review", "approved", "rejected"];
+      } else if (role === "sdo" && !req.query.status) {
+        where.status = ["zonal_review", "approved", "rejected"];
+      }
+
       const records = await Model.findAll({
         where,
         include: [{ model: StateOffice, as: "state", attributes: ["id","description"] }],
@@ -57,24 +98,83 @@ const makeController = (Model, prefix) => ({
     try {
       const record = await Model.findByPk(req.params.id);
       if (!record) return res.status(404).json({ success: false, message: "Not found" });
+      if (!["draft", "rejected"].includes(record.status)) {
+        return res.status(403).json({ success: false, message: "Cannot edit a report under review or approved" });
+      }
       await record.update(req.body);
       res.json({ success: true, data: record });
     } catch (err) { next(err); }
   },
 
+  // Role-enforced approval
+  approve: async (req, res, next) => {
+    try {
+      const role = req.user?.role;
+      const chain = CHAIN[role];
+      if (!chain) return res.status(403).json({ success: false, message: "Your role cannot approve reports" });
+
+      const record = await Model.findByPk(req.params.id);
+      if (!record) return res.status(404).json({ success: false, message: "Not found" });
+
+      if (record.status !== chain.requiredStatus) {
+        return res.status(422).json({
+          success: false,
+          message: `Cannot approve: report is "${record.status}", expected "${chain.requiredStatus}"`,
+        });
+      }
+
+      const actor = req.user.name || req.user.staff_id;
+      await record.update({
+        status: chain.approveStatus,
+        ...chain.auditApprove(actor),
+        ...(req.body.note && { state_review_note: req.body.note }),
+      });
+
+      res.json({ success: true, data: record, message: "Report approved and forwarded" });
+    } catch (err) { next(err); }
+  },
+
+  // Role-enforced rejection
+  reject: async (req, res, next) => {
+    try {
+      const role = req.user?.role;
+      const chain = CHAIN[role];
+      if (!chain) return res.status(403).json({ success: false, message: "Your role cannot reject reports" });
+
+      const record = await Model.findByPk(req.params.id);
+      if (!record) return res.status(404).json({ success: false, message: "Not found" });
+
+      if (record.status !== chain.requiredStatus) {
+        return res.status(422).json({
+          success: false,
+          message: `Cannot reject: report is "${record.status}", expected "${chain.requiredStatus}"`,
+        });
+      }
+
+      if (!req.body.reason) {
+        return res.status(422).json({ success: false, message: "Rejection reason is required" });
+      }
+
+      const actor = req.user.name || req.user.staff_id;
+      await record.update({ status: "rejected", ...chain.auditReject(actor, req.body.reason) });
+      res.json({ success: true, data: record, message: "Report rejected" });
+    } catch (err) { next(err); }
+  },
+
+  // Admin-only generic status override
   updateStatus: async (req, res, next) => {
     try {
-      const { status } = req.body;
-      if (!["draft","submitted","approved"].includes(status))
+      if (req.user?.role !== "admin") return res.status(403).json({ success: false, message: "Admin only" });
+      const allowed = ["draft","submitted","under_review","zonal_review","approved","rejected"];
+      if (!allowed.includes(req.body.status))
         return res.status(422).json({ success: false, message: "Invalid status" });
       const record = await Model.findByPk(req.params.id);
       if (!record) return res.status(404).json({ success: false, message: "Not found" });
-      await record.update({ status });
+      await record.update({ status: req.body.status });
       res.json({ success: true, data: record });
     } catch (err) { next(err); }
   },
 
-  // Aggregate all months for a state+year into annual totals
   aggregate: async (req, res, next) => {
     try {
       const { state_id, year } = req.query;

@@ -33,7 +33,17 @@ const SqaMonthlyReport = sequelize.define("SqaMonthlyReport", {
   // Meta
   submitted_by: { type: DataTypes.STRING(100), allowNull: true },
   section: { type: DataTypes.ENUM("sqa","complaints"), allowNull: false, defaultValue: "sqa", comment: "sqa=HMO/HCP QA, complaints=Enrollee Complaints" },
-  status: { type: DataTypes.ENUM("draft","submitted","approved"), allowNull: false, defaultValue: "draft" },
+  status: { type: DataTypes.ENUM("draft","submitted","under_review","zonal_review","approved","rejected"), allowNull: false, defaultValue: "draft" },
+  // Approval chain audit
+  state_reviewed_by: { type: DataTypes.STRING(100), allowNull: true },
+  state_reviewed_at: { type: DataTypes.DATE,        allowNull: true },
+  state_review_note: { type: DataTypes.TEXT,        allowNull: true },
+  zonal_reviewed_by: { type: DataTypes.STRING(100), allowNull: true },
+  zonal_reviewed_at: { type: DataTypes.DATE,        allowNull: true },
+  zonal_review_note: { type: DataTypes.TEXT,        allowNull: true },
+  rejection_reason:  { type: DataTypes.TEXT,        allowNull: true },
+  rejected_by:       { type: DataTypes.STRING(100), allowNull: true },
+  rejected_at:       { type: DataTypes.DATE,        allowNull: true },
 }, { tableName: "sqa_monthly_reports", modelName: "SqaMonthlyReport" });
 
 module.exports = SqaMonthlyReport;

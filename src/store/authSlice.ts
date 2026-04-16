@@ -3,6 +3,8 @@ import type { AccessEntry } from "@/src/access/types";
 
 export interface AuthStateOffice  { id: number; code: string; description: string; zonal_id?: number; }
 export interface AuthZonalOffice  { id: number; zonal_code: string; description: string; }
+export interface AuthDepartment   { id: number; name: string; department_code?: string; }
+export interface AuthUnit         { id: number; name: string; unit_code?: string; department_id?: number; }
 
 export interface AuthUser {
   id: number;
@@ -18,8 +20,10 @@ export interface AuthUser {
   unit_id?: number;
   is_active?: boolean;
   /** Nested objects returned by the backend on login/me */
-  state?: AuthStateOffice;
-  zone?:  AuthZonalOffice;
+  state?:      AuthStateOffice;
+  zone?:       AuthZonalOffice;
+  department?: AuthDepartment;
+  unit?:       AuthUnit;
 }
 
 interface AuthState {
