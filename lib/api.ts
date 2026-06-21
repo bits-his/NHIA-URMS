@@ -75,6 +75,20 @@ export const annualReportApi = {
       body: JSON.stringify({ status }),
     }),
 
+  /** State-coordinator, zonal-coordinator, or SDO approves a report */
+  approve: (referenceId: string, note?: string) =>
+    request<{ success: boolean; data: any; message: string }>(`/annual-reports/${referenceId}/approve`, {
+      method: "PATCH",
+      body: JSON.stringify({ note }),
+    }),
+
+  /** State-coordinator, zonal-coordinator, or SDO rejects a report */
+  reject: (referenceId: string, reason: string) =>
+    request<{ success: boolean; data: any; message: string }>(`/annual-reports/${referenceId}/reject`, {
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
+    }),
+
   delete: (referenceId: string) =>
     request<{ success: boolean; message: string }>(`/annual-reports/${referenceId}`, {
       method: "DELETE",
@@ -174,6 +188,10 @@ const makeDeptApi = (dept: MonthlyDept) => ({
     request<{ success: boolean; data: any }>(`${monthlyBase(dept)}/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   updateStatus: (id: number | string, status: string) =>
     request<{ success: boolean; data: any }>(`${monthlyBase(dept)}/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  approve: (id: number | string, note?: string) =>
+    request<{ success: boolean; data: any; message: string }>(`${monthlyBase(dept)}/${id}/approve`, { method: "PATCH", body: JSON.stringify({ note }) }),
+  reject: (id: number | string, reason: string) =>
+    request<{ success: boolean; data: any; message: string }>(`${monthlyBase(dept)}/${id}/reject`, { method: "PATCH", body: JSON.stringify({ reason }) }),
 });
 
 export const monthlyApi = {
