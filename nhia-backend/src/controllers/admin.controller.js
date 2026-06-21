@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { Op } = require("sequelize");
-const { User, ZonalOffice, StateOffice, Department, Unit } = require("../models");
-const { ROLES } = require("../models/User");
+const { User, ZonalOffice, StateOffice, Department, Unit, Role } = require("../models");
+const { validateRoleKey, generateStaffId, KEY_RE, slugify } = require("../utils/roleService");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const paginate = (query) => {
@@ -76,7 +76,7 @@ const getUser = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// Role → Staff ID prefix map
+// Role → Staff ID prefix map (legacy fallback — prefer roles table)
 const ROLE_PREFIX = {
   "admin":               "ADMIN",
   "state-officer":       "SO",
@@ -88,20 +88,15 @@ const ROLE_PREFIX = {
   "dg-ceo":              "DG",
 };
 
-const generateStaffId = async (role) => {
-  const prefix = ROLE_PREFIX[role] || "USR";
-  const count = await User.count({ where: { role } });
-  return `${prefix}-${String(count + 1).padStart(4, "0")}`;
-};
-
 const createUser = async (req, res, next) => {
   try {
     const { name, email, password, role, zone_id, state_id, department_id, unit_id, access } = req.body;
     if (!name || !password || !role) {
       return res.status(400).json({ success: false, message: "name, password, role required" });
     }
-    if (!ROLES.includes(role)) {
-      return res.status(400).json({ success: false, message: `Invalid role. Valid: ${ROLES.join(", ")}` });
+    const roleCheck = await validateRoleKey(role);
+    if (!roleCheck.ok) {
+      return res.status(400).json({ success: false, message: roleCheck.message });
     }
     const staff_id = await generateStaffId(role);
     const hashed = await bcrypt.hash(password, 12);
@@ -132,8 +127,11 @@ const updateUser = async (req, res, next) => {
     // Remove undefined keys
     Object.keys(updates).forEach(k => updates[k] === undefined && delete updates[k]);
 
-    if (updates.role && !ROLES.includes(updates.role)) {
-      return res.status(400).json({ success: false, message: "Invalid role" });
+    if (updates.role) {
+      const roleCheck = await validateRoleKey(updates.role);
+      if (!roleCheck.ok) {
+        return res.status(400).json({ success: false, message: roleCheck.message });
+      }
     }
 
     await user.update(updates);
@@ -142,12 +140,26 @@ const updateUser = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-const deleteUser = async (req, res, next) => {
+const deactivateUser = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) return notFound(res, "User");
-    await user.destroy();
-    res.json({ success: true, message: "User deleted" });
+    if (user.id === req.user.id) {
+      return res.status(403).json({ success: false, message: "You cannot deactivate your own account" });
+    }
+    await user.update({ is_active: false });
+    const { password: _pw, ...data } = user.toJSON();
+    res.json({ success: true, message: "User deactivated", data });
+  } catch (err) { next(err); }
+};
+
+const activateUser = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) return notFound(res, "User");
+    await user.update({ is_active: true });
+    const { password: _pw, ...data } = user.toJSON();
+    res.json({ success: true, message: "User activated", data });
   } catch (err) { next(err); }
 };
 
@@ -375,12 +387,99 @@ const deleteUnit = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROLES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const listRoles = async (req, res, next) => {
+  try {
+    const where = {};
+    if (req.query.active === "true") where.is_active = true;
+    const roles = await Role.findAll({ where, order: [["label", "ASC"]] });
+    res.json({ success: true, data: roles });
+  } catch (err) { next(err); }
+};
+
+const createRole = async (req, res, next) => {
+  try {
+    const { label, key, staff_id_prefix, report_scope, can_create_monthly, can_review_monthly, description } = req.body;
+    if (!label?.trim()) {
+      return res.status(400).json({ success: false, message: "label is required" });
+    }
+    const roleKey = (key?.trim() || slugify(label)).toLowerCase();
+    if (!KEY_RE.test(roleKey)) {
+      return res.status(400).json({ success: false, message: "key must be lowercase letters, numbers, and hyphens (e.g. audit-officer)" });
+    }
+    const prefix = (staff_id_prefix?.trim() || roleKey.split("-").map(w => w[0]?.toUpperCase()).join("").slice(0, 6) || "USR").toUpperCase();
+    const role = await Role.create({
+      key: roleKey,
+      label: label.trim(),
+      staff_id_prefix: prefix,
+      report_scope: report_scope || "none",
+      can_create_monthly: !!can_create_monthly,
+      can_review_monthly: !!can_review_monthly,
+      description: description || null,
+      is_system: false,
+      is_active: true,
+    });
+    res.status(201).json({ success: true, data: role });
+  } catch (err) {
+    if (err.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ success: false, message: "A role with this key already exists" });
+    }
+    next(err);
+  }
+};
+
+const updateRole = async (req, res, next) => {
+  try {
+    const role = await Role.findByPk(req.params.id);
+    if (!role) return notFound(res, "Role");
+
+    const { label, staff_id_prefix, report_scope, can_create_monthly, can_review_monthly, description, is_active } = req.body;
+    const updates = {
+      label: label?.trim(),
+      staff_id_prefix: staff_id_prefix?.trim()?.toUpperCase(),
+      report_scope,
+      can_create_monthly,
+      can_review_monthly,
+      description,
+      is_active,
+    };
+    Object.keys(updates).forEach(k => updates[k] === undefined && delete updates[k]);
+
+    if (role.is_system && updates.label === undefined && Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: "Nothing to update" });
+    }
+
+    await role.update(updates);
+    res.json({ success: true, data: role });
+  } catch (err) { next(err); }
+};
+
+const deleteRole = async (req, res, next) => {
+  try {
+    const role = await Role.findByPk(req.params.id);
+    if (!role) return notFound(res, "Role");
+    if (role.is_system) {
+      return res.status(403).json({ success: false, message: "System roles cannot be deleted" });
+    }
+    const usersCount = await User.count({ where: { role: role.key } });
+    if (usersCount > 0) {
+      return res.status(409).json({ success: false, message: `${usersCount} user(s) still have this role. Reassign them first.` });
+    }
+    await role.destroy();
+    res.json({ success: true, message: "Role deleted" });
+  } catch (err) { next(err); }
+};
+
 module.exports = {
-  listUsers, getUser, createUser, updateUser, deleteUser, updatePrivileges,
+  listUsers, getUser, createUser, updateUser, deactivateUser, activateUser, updatePrivileges,
   listZones, createZone, updateZone, deleteZone,
   listStates, createState, updateState, deleteState,
   listDepartments, createDepartment, updateDepartment, deleteDepartment,
   listUnits, createUnit, updateUnit, deleteUnit,
+  listRoles, createRole, updateRole, deleteRole,
 };
 
 const notFound = (res, entity) =>

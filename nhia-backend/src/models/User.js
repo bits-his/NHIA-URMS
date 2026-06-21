@@ -1,8 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const ROLES = ["admin", "state-officer", "zonal-coordinator", "state-coordinator", "department-officer", "sdo", "hq-department", "dg-ceo"];
-
 const User = sequelize.define(
   "User",
   {
@@ -11,7 +9,8 @@ const User = sequelize.define(
     staff_id: { type: DataTypes.STRING(30), allowNull: false, unique: true },
     email: { type: DataTypes.STRING(150), allowNull: true, unique: true },
     password: { type: DataTypes.STRING(255), allowNull: false },
-    role: { type: DataTypes.ENUM(...ROLES), allowNull: false, defaultValue: "state-officer" },
+    /** Role key — references roles.key */
+    role: { type: DataTypes.STRING(50), allowNull: false, defaultValue: "state-officer" },
     zone_id: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: true,
@@ -51,4 +50,4 @@ const User = sequelize.define(
   { tableName: "users", modelName: "User" }
 );
 
-module.exports = { User, ROLES };
+module.exports = { User };

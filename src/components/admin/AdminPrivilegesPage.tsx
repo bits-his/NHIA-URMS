@@ -9,6 +9,7 @@ import { usersApi, type AdminUser } from "@/lib/adminApi";
 import AdminModal from "./AdminModal";
 import { MODULE_CONFIG } from "@/src/access/moduleConfig";
 import { flatLeaves } from "@/src/access/moduleConfig";
+import { normalizeFunctionalityTitle } from "@/src/access/accessUtils";
 
 const ROLE_LABELS: Record<string, string> = {
   "state-officer":      "State Officer",
@@ -133,8 +134,7 @@ export default function AdminPrivilegesPage() {
       const mod = MODULE_CONFIG.find(m => m.title === entry.access_to);
       if (mod && Array.isArray(entry.functionalities)) {
         entry.functionalities.forEach((funcTitle: string) => {
-          const child = mod.children.find(c => c.title === funcTitle);
-          if (child) keys.add(child.path);
+          keys.add(normalizeFunctionalityTitle(funcTitle));
         });
       }
     });
@@ -186,9 +186,7 @@ export default function AdminPrivilegesPage() {
         .filter(mod => granted.has(mod.title))
         .map(mod => ({
           access_to: mod.title,
-          functionalities: mod.children
-            .filter(c => granted.has(c.path))
-            .map(c => c.title),
+          functionalities: flatLeaves(mod).filter(t => granted.has(t)),
         }));
 
       await usersApi.updatePrivileges(selected.id, access as any);

@@ -49,10 +49,12 @@ import ZonalDirectorDashboard from "./ZonalDirectorDashboard";
 import StateOfficeDashboard from "./StateOfficeDashboard";
 import DepartmentalDashboard from "./DepartmentalDashboard";
 import ReportReviewPage from "./ReportReviewPage";
+import NotificationsPage from "./NotificationsPage";
+import { getMonthlyReportContext } from "@/src/access/monthlyReportAccess";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-coordinator" | "state-coordinator" | "department-officer" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
-type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verification" | "stock-verifications-list" | "stock-assets" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review";
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verification" | "stock-verifications-list" | "stock-assets" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review" | "notifications";
 interface DashboardProps { role: Role; user?: import("@/src/store/authSlice").AuthUser; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -397,6 +399,7 @@ export default function Dashboard({ role, user, access = [], functionalities = "
   const [selectedReportRef, setSelectedReportRef] = React.useState<string | null>(null);
   const [selectedVerifId, setSelectedVerifId] = React.useState<number | null>(null);
   const userInfo = getUserInfo(role) ?? { name: "User", initials: "U", email: "user@nhia.gov.ng", dept: "NHIA" };
+  const monthlyCtx = getMonthlyReportContext(role, user);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f4f7f5]">
@@ -474,7 +477,7 @@ export default function Dashboard({ role, user, access = [], functionalities = "
             <Separator orientation="vertical" className="h-5 bg-[#d4e8dc]" />
             <div>
               <p className="text-sm font-bold text-slate-800 leading-tight">
-                {view === "home" ? "Dashboard Overview" : view === "report-entry" ? "Submit Report" : view === "zonal-review" ? "Review Reports" : view === "report-review" ? "Report Review" : "Dashboard"}
+                {view === "home" ? "Dashboard Overview" : view === "report-entry" ? "Submit Report" : view === "zonal-review" ? "Review Reports" : view === "report-review" ? "Report Review" : view === "notifications" ? "Notifications" : "Dashboard"}
               </p>
               <p className="text-[10px] text-slate-400">NHIA Reporting Management Dashboard</p>
             </div>
@@ -488,7 +491,11 @@ export default function Dashboard({ role, user, access = [], functionalities = "
               />
             </div>
 
-            <button className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-[#e8f5ee] hover:text-[#145c3f] transition-colors border border-[#d4e8dc]">
+            <button
+              type="button"
+              onClick={() => setView("notifications")}
+              className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-[#e8f5ee] hover:text-[#145c3f] transition-colors border border-[#d4e8dc]"
+            >
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border-2 border-white" />
             </button>
@@ -772,8 +779,9 @@ export default function Dashboard({ role, user, access = [], functionalities = "
             ) : view === "annual-reports-list" ? (
               <AnnualReportsList
                 onBack={() => setView("home")}
-                onNewReport={() => setView("annual-report")}
-                onViewReport={(refId) => { setSelectedReportRef(refId); setView("annual-report-detail"); }}
+                defaultZoneId={monthlyCtx.defaultZoneId ?? (user?.zone_id ? String(user.zone_id) : null)}
+                defaultStateId={monthlyCtx.defaultStateId}
+                reportScope={(user?.role_config?.report_scope as "national" | "zonal" | "state" | "none") ?? "national"}
               />
             ) : view === "annual-report-detail" ? (
               <AnnualReportDetail
@@ -792,40 +800,49 @@ export default function Dashboard({ role, user, access = [], functionalities = "
               <StockAssetManager onBack={() => setView("home")} />
             ) : view === "finance-monthly" ? (
               <DeptMonthlyPage dept="finance" title="Finance Monthly Reports" section="finance"
-                onBack={() => setView("home")} defaultZoneId={null} defaultStateId={null}
+                onBack={() => setView("home")} defaultZoneId={monthlyCtx.defaultZoneId} defaultStateId={monthlyCtx.defaultStateId}
+                canCreate={monthlyCtx.canCreateMonthly}
                 FormComponent={FinanceMonthlyForm} />
             ) : view === "admin-monthly" ? (
               <DeptMonthlyPage dept="finance" title="Admin / HR Monthly Reports" section="admin"
-                onBack={() => setView("home")} defaultZoneId={null} defaultStateId={null}
+                onBack={() => setView("home")} defaultZoneId={monthlyCtx.defaultZoneId} defaultStateId={monthlyCtx.defaultStateId}
+                canCreate={monthlyCtx.canCreateMonthly}
                 FormComponent={AdminMonthlyForm} />
             ) : view === "programmes-monthly" ? (
               <DeptMonthlyPage dept="programmes" title="Enrolment Monthly Reports" section="enrolment"
-                onBack={() => setView("home")} defaultZoneId={null} defaultStateId={null}
+                onBack={() => setView("home")} defaultZoneId={monthlyCtx.defaultZoneId} defaultStateId={monthlyCtx.defaultStateId}
+                canCreate={monthlyCtx.canCreateMonthly}
                 FormComponent={ProgrammesMonthlyForm} />
             ) : view === "outreach-monthly" ? (
               <DeptMonthlyPage dept="programmes" title="Outreach Monthly Reports" section="outreach"
-                onBack={() => setView("home")} defaultZoneId={null} defaultStateId={null}
+                onBack={() => setView("home")} defaultZoneId={monthlyCtx.defaultZoneId} defaultStateId={monthlyCtx.defaultStateId}
+                canCreate={monthlyCtx.canCreateMonthly}
                 FormComponent={OutreachMonthlyForm} />
             ) : view === "sqa-monthly" ? (
               <DeptMonthlyPage dept="sqa" title="HMO/HCP Quality Assurance Monthly Reports" section="sqa"
-                onBack={() => setView("home")} defaultZoneId={null} defaultStateId={null}
+                onBack={() => setView("home")} defaultZoneId={monthlyCtx.defaultZoneId} defaultStateId={monthlyCtx.defaultStateId}
+                canCreate={monthlyCtx.canCreateMonthly}
                 FormComponent={SqaMonthlyForm} />
             ) : view === "complaints-monthly" ? (
               <DeptMonthlyPage dept="sqa" title="Enrollee Complaints Monthly Reports" section="complaints"
-                onBack={() => setView("home")} defaultZoneId={null} defaultStateId={null}
+                onBack={() => setView("home")} defaultZoneId={monthlyCtx.defaultZoneId} defaultStateId={monthlyCtx.defaultStateId}
+                canCreate={monthlyCtx.canCreateMonthly}
                 FormComponent={ComplaintsMonthlyForm} />
             ) : view === "monthly-reports-list" ? (
               <MonthlyReportsList
                 onBack={() => setView("home")}
                 onNew={(dept) => setView(`${dept === "finance" ? "finance" : dept === "sqa" ? "sqa" : "programmes"}-monthly` as View)}
-                defaultStateId={null}
+                defaultStateId={monthlyCtx.defaultStateId}
               />
             ) : view === "settings" ? (
               <AdminSettingsPage />
+            ) : view === "notifications" ? (
+              <NotificationsPage onBack={() => setView("home")} />
             ) : view === "report-review" ? (
               <ReportReviewPage role={role} onBack={() => setView("home")} />
-            ) : (              <ZonalCompose onBack={() => setView("zonal-review")} onForward={() => setView("home")} />
-            )}
+            ) : view === "zonal-compose" ? (
+              <ZonalCompose onBack={() => setView("zonal-review")} onForward={() => setView("home")} />
+            ) : null}
           </AnimatePresence>
         </main>
       </div>

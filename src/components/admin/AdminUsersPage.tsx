@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, TrendingUp, ChevronDown, ShieldCheck } from "lucide-react";
+import { Plus, Pencil, Search, ChevronLeft, ChevronRight, TrendingUp, ChevronDown, ShieldCheck, UserX, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,18 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SearchSelect } from "@/components/ui/search-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { usersApi, zonesApi, statesApi, departmentsApi, unitsApi, type AdminUser, type ZonalOffice, type StateOffice, type Department, type Unit } from "@/lib/adminApi";
+import { usersApi, rolesApi, zonesApi, statesApi, departmentsApi, unitsApi, type AdminUser, type AppRole, type ZonalOffice, type StateOffice, type Department, type Unit } from "@/lib/adminApi";
 import AdminModal from "./AdminModal";
 import { MODULE_CONFIG } from "@/src/access/moduleConfig";
+import { normalizeFunctionalityTitle } from "@/src/access/accessUtils";
 
-const ROLES = ["state-officer", "zonal-coordinator", "state-coordinator", "department-officer", "sdo", "hq-department", "dg-ceo", "admin"] as const;
-const ROLE_LABELS: Record<string, string> = {
-  "state-officer":      "State Officer",
-  "zonal-coordinator":  "Zonal Coordinator",
-  "state-coordinator":  "State Coordinator",
-  "department-officer": "Department Officer",
-  "sdo": "SDO", "hq-department": "HQ Department", "dg-ceo": "DG-CEO", "admin": "Admin",
-};
 const ROLE_COLORS: Record<string, string> = {
   "admin":              "bg-purple-100 text-purple-700 border-purple-200",
   "dg-ceo":             "bg-rose-100 text-rose-700 border-rose-200",
@@ -31,9 +24,10 @@ const ROLE_COLORS: Record<string, string> = {
   "state-officer":      "bg-slate-100 text-slate-700 border-slate-200",
 };
 
-const EMPTY = { name: "", email: "", password: "", role: "state-officer", zone_id: "", state_id: "", department_id: "", unit_id: "", is_active: true };
+const EMPTY = { name: "", email: "", password: "", role: "", zone_id: "", state_id: "", department_id: "", unit_id: "", is_active: true };
 
 export default function AdminUsersPage({ showOverview = false }: { showOverview?: boolean }) {
+  const [roles, setRoles] = React.useState<AppRole[]>([]);
   const [users, setUsers] = React.useState<AdminUser[]>([]);
   const [zones, setZones] = React.useState<ZonalOffice[]>([]);
   const [states, setStates] = React.useState<StateOffice[]>([]);
@@ -53,7 +47,19 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
   const [granted, setGranted] = React.useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = React.useState<"info" | "access">("info");
 
-  // Overview stats
+  const roleLabels = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    roles.forEach(r => { map[r.key] = r.label; });
+    return map;
+  }, [roles]);
+
+  const activeRoles = React.useMemo(() => roles.filter(r => r.is_active), [roles]);
+
+  const defaultRole = activeRoles.find(r => r.key === "state-officer")?.key || activeRoles[0]?.key || "";
+
+  React.useEffect(() => {
+    rolesApi.list(true).then(r => setRoles(r.data)).catch(() => {});
+  }, []);
   const [stats, setStats] = React.useState<{ label: string; value: number; tint: string; iconColor: string; icon: React.ReactNode }[]>([]);
 
   React.useEffect(() => {
@@ -97,7 +103,7 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
     try { const r = await unitsApi.list(Number(deptId)); setFormUnits(r.data); } catch { /* silent */ }
   };
 
-  const openCreate = () => { setForm({ ...EMPTY }); setFormUnits([]); setGranted(new Set()); setActiveTab("info"); setEditing(null); setModal("create"); };
+  const openCreate = () => { setForm({ ...EMPTY, role: defaultRole }); setFormUnits([]); setGranted(new Set()); setActiveTab("info"); setEditing(null); setModal("create"); };
   const openEdit = async (u: AdminUser) => {
     setEditing(u);
     setForm({
@@ -113,7 +119,7 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
       if (!entry?.access_to) return;
       keys.add(entry.access_to);
       if (Array.isArray(entry.functionalities)) {
-        entry.functionalities.forEach((funcTitle: string) => keys.add(funcTitle));
+        entry.functionalities.forEach((funcTitle: string) => keys.add(normalizeFunctionalityTitle(funcTitle)));
       }
     });
     setGranted(keys);
@@ -172,9 +178,14 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (u: AdminUser) => {
-    if (!confirm(`Delete user "${u.name}"?`)) return;
-    try { await usersApi.delete(u.id); toast.success("User deleted"); load(); }
+  const handleDeactivate = async (u: AdminUser) => {
+    if (!confirm(`Deactivate user "${u.name}"? They will no longer be able to log in.`)) return;
+    try { await usersApi.deactivate(u.id); toast.success("User deactivated"); load(); }
+    catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleActivate = async (u: AdminUser) => {
+    try { await usersApi.activate(u.id); toast.success("User activated"); load(); }
     catch (e: any) { toast.error(e.message); }
   };
 
@@ -226,8 +237,8 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
         </div>
         <select className="h-10 px-3 rounded-xl border border-[#d4e8dc] bg-white text-sm text-slate-700 focus:ring-2 focus:ring-[#25a872] outline-none"
           value={filterRole} onChange={e => { setFilterRole(e.target.value); setPage(1); }}>
-          <option value="">All Roles</option>
-          {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+          <option value="">All roles</option>
+          {activeRoles.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
         </select>
         <select className="h-10 px-3 rounded-xl border border-[#d4e8dc] bg-white text-sm text-slate-700 focus:ring-2 focus:ring-[#25a872] outline-none"
           value={filterZone} onChange={e => { setFilterZone(e.target.value); setPage(1); }}>
@@ -265,7 +276,7 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
                   <TableCell className="font-mono text-xs text-slate-600">{u.staff_id}</TableCell>
                   <TableCell>
                     <Badge className={`text-[10px] border ${ROLE_COLORS[u.role] ?? "bg-slate-100 text-slate-600"}`}>
-                      {ROLE_LABELS[u.role] ?? u.role}
+                      {roleLabels[u.role] ?? u.role}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-slate-500 hidden md:table-cell">{u.zone?.zonal_code ?? "—"}</TableCell>
@@ -278,7 +289,13 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
                   <TableCell className="text-right">
                     <div className="flex items-center gap-1 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(u)} className="h-7 w-7 p-0 hover:bg-[#e8f5ee] hover:text-[#145c3f]"><Pencil className="w-3.5 h-3.5" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(u)} className="h-7 w-7 p-0 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      {u.is_active ? (
+                        <Button variant="ghost" size="sm" onClick={() => handleDeactivate(u)} title="Deactivate user"
+                          className="h-7 w-7 p-0 hover:bg-rose-50 hover:text-rose-600"><UserX className="w-3.5 h-3.5" /></Button>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => handleActivate(u)} title="Reactivate user"
+                          className="h-7 w-7 p-0 hover:bg-emerald-50 hover:text-emerald-600"><UserCheck className="w-3.5 h-3.5" /></Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -317,13 +334,13 @@ export default function AdminUsersPage({ showOverview = false }: { showOverview?
             </Field>
 
             <Field label="Role" required>
-              <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
-                <SelectTrigger displayValue={ROLE_LABELS[form.role] ?? form.role}>
+              <Select value={form.role || defaultRole} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
+                <SelectTrigger displayValue={roleLabels[form.role] ?? form.role}>
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map(r => (
-                    <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                  {activeRoles.map(r => (
+                    <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

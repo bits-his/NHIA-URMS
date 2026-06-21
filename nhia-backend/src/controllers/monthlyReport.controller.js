@@ -1,5 +1,6 @@
 const sequelize = require("../config/database");
 const { FinanceMonthlyReport, ProgrammesMonthlyReport, SqaMonthlyReport, StateOffice } = require("../models");
+const { buildMonthlyListWhere } = require("../utils/monthlyReportScope");
 
 const MONTH_NAMES = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -51,29 +52,7 @@ const makeController = (Model, prefix) => ({
 
   list: async (req, res, next) => {
     try {
-      const where = {};
-      const role = req.user?.role;
-
-      if (req.query.state_id) where.state_id = req.query.state_id;
-      if (req.query.year)     where.reporting_year  = req.query.year;
-      if (req.query.month)    where.reporting_month = req.query.month;
-      if (req.query.status)   where.status = req.query.status;
-      if (req.query.section)  where.section = req.query.section;
-
-      // Role-based scoping
-      if ((role === "state-officer" || role === "state-coordinator") && req.user.state_id && !req.query.state_id) {
-        where.state_id = req.user.state_id;
-        if (role === "state-coordinator" && !req.query.status) {
-          where.status = ["submitted", "under_review", "zonal_review", "approved", "rejected"];
-        }
-      } else if (role === "zonal-coordinator" && req.user.zone_id && !req.query.state_id) {
-        const zoneStates = await StateOffice.findAll({ where: { zonal_id: req.user.zone_id }, attributes: ["id"] });
-        const stateIds = zoneStates.map(s => s.id);
-        if (stateIds.length) where.state_id = stateIds;
-        if (!req.query.status) where.status = ["under_review", "zonal_review", "approved", "rejected"];
-      } else if (role === "sdo" && !req.query.status) {
-        where.status = ["zonal_review", "approved", "rejected"];
-      }
+      const where = await buildMonthlyListWhere(req.user, req.query, StateOffice);
 
       const records = await Model.findAll({
         where,

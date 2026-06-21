@@ -1,11 +1,13 @@
 const { Router } = require("express");
-const { authenticate, authorize } = require("../middleware/auth");
+const { authenticate } = require("../middleware/auth");
+const { requireSettingsAccess } = require("../middleware/settingsAccess");
 const {
-  listUsers, getUser, createUser, updateUser, deleteUser, updatePrivileges,
+  listUsers, getUser, createUser, updateUser, deactivateUser, activateUser, updatePrivileges,
   listZones, createZone, updateZone, deleteZone,
   listStates, createState, updateState, deleteState,
   listDepartments, createDepartment, updateDepartment, deleteDepartment,
   listUnits, createUnit, updateUnit, deleteUnit,
+  listRoles, createRole, updateRole, deleteRole,
 } = require("../controllers/admin.controller");
 
 const router = Router();
@@ -21,6 +23,9 @@ router.get("/units",       listUnits);
 // Zones & States are needed by zonal/state coordinators and state officers
 router.get("/zones",  listZones);
 router.get("/states", listStates);
+
+// Roles — read for any authenticated user (dropdowns); write requires Settings access
+router.get("/roles", listRoles);
 
 // Staff count — scoped to the caller's own state/zone (non-admin safe)
 // Returns only count + minimal fields; no passwords, no sensitive data
@@ -61,8 +66,8 @@ router.get("/staff-count", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ─── Everything else is admin-only ───────────────────────────────────────────
-router.use(authorize("admin"));
+// ─── Settings module (admin or privileged users) ─────────────────────────────
+router.use(requireSettingsAccess);
 
 // Users
 router.get("/users",                listUsers);
@@ -70,7 +75,8 @@ router.get("/users/:id",            getUser);
 router.post("/users",               createUser);
 router.put("/users/:id",            updateUser);
 router.patch("/users/:id/privileges", updatePrivileges);
-router.delete("/users/:id",         deleteUser);
+router.patch("/users/:id/deactivate", deactivateUser);
+router.patch("/users/:id/activate",   activateUser);
 
 // Zonal Offices (write)
 router.post("/zones",        createZone);
@@ -91,5 +97,10 @@ router.delete("/departments/:id",  deleteDepartment);
 router.post("/units",        createUnit);
 router.put("/units/:id",     updateUnit);
 router.delete("/units/:id",  deleteUnit);
+
+// Roles (write)
+router.post("/roles",        createRole);
+router.put("/roles/:id",     updateRole);
+router.delete("/roles/:id",  deleteRole);
 
 module.exports = router;

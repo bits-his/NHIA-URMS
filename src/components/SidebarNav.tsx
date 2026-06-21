@@ -2,13 +2,15 @@ import * as React from "react";
 import {
   ChevronDown, ChevronRight, Settings, Home, BarChart3, FileText,
   CheckSquare, Banknote, ShieldCheck, Wifi, LayoutGrid, Briefcase,
-  Flag, Database, Archive, Bell, Users, ClipboardList, PackageSearch,
+  Bell, Users, ClipboardList, PackageSearch,
   FolderKanban, Radio, Wrench, MapPin, Scale, Megaphone, BookOpen,
   Activity, TrendingUp,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AccessEntry } from "@/src/access/types";
 import { MODULE_CONFIG, type ChildModule, type SubGroup } from "@/src/access/moduleConfig";
+import { hasModuleAccess } from "@/src/access/roles";
+import { normalizeAllowedTitles } from "@/src/access/accessUtils";
 
 type View = string;
 
@@ -29,9 +31,7 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
   "ICT Support":          <Wifi className="w-4 h-4" />,
   "Programmes":           <LayoutGrid className="w-4 h-4" />,
   "SDO":                  <Briefcase className="w-4 h-4" />,
-  "Directives":           <Flag className="w-4 h-4" />,
   "Reports":              <BarChart3 className="w-4 h-4" />,
-  "HQ Data":              <Database className="w-4 h-4" />,
   "Audit & Compliance":   <ClipboardList className="w-4 h-4" />,
   "Human Resources":      <Users className="w-4 h-4" />,
   "Planning & Research":  <TrendingUp className="w-4 h-4" />,
@@ -39,7 +39,6 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
   "Special Projects":     <FolderKanban className="w-4 h-4" />,
   "Communications":       <Megaphone className="w-4 h-4" />,
   "Legal Services":       <Scale className="w-4 h-4" />,
-  "Archive":              <Archive className="w-4 h-4" />,
   "Notifications":        <Bell className="w-4 h-4" />,
   "Settings":             <Settings className="w-4 h-4" />,
 };
@@ -47,13 +46,13 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
 // ─── Path → view key map for known routed views ───────────────────────────────
 const PATH_TO_VIEW: Record<string, string> = {
   "/dashboard":                   "home",
-  "/annual-reports/new":          "annual-report",
   "/annual-reports/mine":         "annual-reports-list",
   "/annual-reports/submit":       "report-entry",
   "/annual-reports/review":       "zonal-review",
   "/sdo/stock-verification":      "stock-verification",
   "/sdo/my-verifications":        "stock-verifications-list",
   "/sdo/assets":                  "stock-assets",
+  "/notifications":               "notifications",
   "/settings/users":              "settings",
   "/settings/privileges":         "settings",
   "/settings/zones":              "settings",
@@ -202,7 +201,29 @@ function ModuleGroup({ title, children, allowedTitles, currentView, setView, sid
   );
 }
 
-// ─── Settings leaf (admin only) ───────────────────────────────────────────────
+// ─── Notifications leaf (always available) ────────────────────────────────────
+function NotificationsLeaf({ view, setView, sidebarOpen }: {
+  view: View; setView: (v: View) => void; sidebarOpen: boolean;
+}) {
+  const active = view === "notifications";
+  return (
+    <button onClick={() => setView("notifications")}
+      className={`w-full flex items-center gap-2.5 pl-3 pr-3 py-2 rounded-xl text-left transition-all group ${
+        active
+          ? "bg-[#25a872] text-white shadow-md shadow-[#25a872]/30"
+          : "text-white/60 hover:bg-white/10 hover:text-white"
+      }`}
+    >
+      <span className={`shrink-0 ${active ? "text-white" : "text-white/50 group-hover:text-white"}`}>
+        <Bell className="w-4 h-4" />
+      </span>
+      {sidebarOpen && <span className="text-xs font-semibold truncate flex-1">Notifications</span>}
+      {sidebarOpen && active && <ChevronRight className="w-3 h-3 ml-auto text-white/70 shrink-0" />}
+    </button>
+  );
+}
+
+// ─── Settings leaf (admin or privileged users) ────────────────────────────────
 function SettingsLeaf({ view, setView, sidebarOpen }: {
   view: View; setView: (v: View) => void; sidebarOpen: boolean;
 }) {
@@ -254,11 +275,13 @@ export default function SidebarNav({ role, access, view, setView, sidebarOpen }:
         if (!mod) return null;
         return {
           mod,
-          allowedTitles: new Set<string>(entry.functionalities),
+          allowedTitles: normalizeAllowedTitles(entry.functionalities),
         };
       })
       .filter(Boolean) as { mod: typeof MODULE_CONFIG[0]; allowedTitles: Set<string> }[];
   }, [role, access]);
+
+  const showSettings = hasModuleAccess(access, "Settings", role);
 
   return (
     <ScrollArea className="flex-1 px-2 py-2 scrollbar-thin">
@@ -268,13 +291,12 @@ export default function SidebarNav({ role, access, view, setView, sidebarOpen }:
         )}
 
         {visibleModules.map(({ mod, allowedTitles }, i) => {
+          if (mod.title === "Notifications" || mod.title === "Settings") return null;
+
           // Single-child modules with a direct view — render as flat leaf
           const flatChildren = mod.children.filter(c => !("type" in c)) as ChildModule[];
           if (flatChildren.length === 1 && !("type" in mod.children[0]) && flatChildren[0].view) {
             const leaf = flatChildren[0];
-            if (mod.title === "Settings" && role === "admin") {
-              return <SettingsLeaf key={i} view={view} setView={setView} sidebarOpen={sidebarOpen} />;
-            }
             return (
               <NavLeaf key={i} title={mod.title} nodeView={leaf.view}
                 currentView={view} setView={setView} depth={0} sidebarOpen={sidebarOpen} />
@@ -296,8 +318,9 @@ export default function SidebarNav({ role, access, view, setView, sidebarOpen }:
           );
         })}
 
-        {/* Admin always sees Settings */}
-        {role === "admin" && !visibleModules.some(({ mod }) => mod.title === "Settings") && (
+        <NotificationsLeaf view={view} setView={setView} sidebarOpen={sidebarOpen} />
+
+        {showSettings && (
           <SettingsLeaf view={view} setView={setView} sidebarOpen={sidebarOpen} />
         )}
       </nav>

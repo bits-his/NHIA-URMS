@@ -12,6 +12,7 @@ const {
   updateStatus,
   deleteReport,
 } = require("../controllers/annualReport.controller");
+const { getOperationalDataHandler } = require("../controllers/operationalData.controller");
 
 const router = Router();
 
@@ -39,6 +40,9 @@ const reportRules = [
 
 // List — role-scoped in controller
 router.get("/", listReports);
+
+// Operational data aggregated from monthly reports (Excel format)
+router.get("/operational-data", getOperationalDataHandler);
 
 // Single report
 router.get("/:referenceId", getReport);

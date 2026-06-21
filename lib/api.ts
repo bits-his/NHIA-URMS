@@ -1,8 +1,14 @@
-const BASE_URL = (process.env.VITE_API_URL as string) || "http://localhost:3001/api";
+import { tokenStore } from "./adminApi";
+
+const BASE_URL = (import.meta.env?.VITE_API_URL as string) || "http://localhost:3001/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = tokenStore.get();
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...options,
   });
   const json = await res.json();
@@ -93,7 +99,86 @@ export const annualReportApi = {
     request<{ success: boolean; message: string }>(`/annual-reports/${referenceId}`, {
       method: "DELETE",
     }),
+
+  /** Aggregated state operational data from monthly departmental reports */
+  getOperationalData: (
+    year: number,
+    filters?: { state_id?: number; zone_id?: number }
+  ) => {
+    const params = new URLSearchParams({ year: String(year) });
+    if (filters?.state_id) params.set("state_id", String(filters.state_id));
+    if (filters?.zone_id) params.set("zone_id", String(filters.zone_id));
+    return request<{ success: boolean; data: OperationalDataResponse }>(
+      `/annual-reports/operational-data?${params}`
+    );
+  },
 };
+
+export interface OperationalDataResponse {
+  year: number;
+  title: string;
+  zone_id: number | null;
+  zone_name: string | null;
+  state_id: number | null;
+  state_name: string | null;
+  rows: OperationalDataRow[];
+  state_count: number;
+  source: string;
+}
+
+export interface QuarterlyBlock {
+  q1: number;
+  q2: number;
+  q3: number;
+  q4: number;
+  sub_total: number;
+}
+
+export interface OperationalDataRow {
+  sn: number;
+  state_id: number;
+  state: string;
+  zone_id: number;
+  zone: string | null;
+  reporting_year: number;
+  staff_no: number | null;
+  total_vehicles: number | null;
+  total_hcf_under_nhia: number | null;
+  total_accredited_hcf: number | null;
+  approved_budget: number | null;
+  total_amount_utilized: number;
+  cemonc_accredited_hcf: number | null;
+  cemonc_beneficiaries: number | null;
+  ffp_accredited_facilities: number | null;
+  ffp_beneficiaries: number | null;
+  gifship_enrolments: QuarterlyBlock;
+  gifship_premium: QuarterlyBlock;
+  ops_count: QuarterlyBlock;
+  fsship_new_enrolments: QuarterlyBlock;
+  extra_dependants: QuarterlyBlock;
+  extra_dependant_premium: QuarterlyBlock;
+  additional_dependants: QuarterlyBlock;
+  change_of_provider: QuarterlyBlock;
+  bhcpf_beneficiaries: number | null;
+  bhcpf_facilities: number | null;
+  tiship_lives: number | null;
+  mha_lives: number | null;
+  sshia_lives: number | null;
+  complaints_registered: number;
+  complaints_resolved: number;
+  complaints_escalated: number;
+  igr: QuarterlyBlock;
+  qa_conducted: QuarterlyBlock;
+  accreditation_requests: QuarterlyBlock;
+  accreditation_conducted: QuarterlyBlock;
+  marketing_sensitization: QuarterlyBlock;
+  stakeholder_meetings: number;
+  media_appearances: number;
+  reconciliation_meetings: number;
+  total_indebtedness: number;
+  amount_recovered: number;
+  months_with_data: { finance: number; programmes: number; sqa: number };
+}
 
 // ─── Stock Verification ───────────────────────────────────────────────────────
 

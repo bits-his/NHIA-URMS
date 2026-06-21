@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "db:sync": "node src/scripts/syncDb.js"
+    "db:sync": "node src/scripts/syncDb.js",
+    "db:migrate-monthly": "node src/scripts/addMonthlyApprovalColumns.js",
+    "db:migrate-roles": "node src/scripts/migrateRoles.js",
+    "db:migrate-depts": "node src/scripts/migrateDepartmentsUnits.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

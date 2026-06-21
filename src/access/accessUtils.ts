@@ -24,11 +24,22 @@ export function canAccessModule(mod: ParentModule, user: AccessUser): boolean {
   return !!(user.access ?? []).find(e => e.access_to === mod.title);
 }
 
+/** Map retired privilege labels to current module titles */
+export function normalizeFunctionalityTitle(title: string): string {
+  if (title === "My Submissions" || title === "New Annual Report") return "Annual Report";
+  return title;
+}
+
+export function normalizeAllowedTitles(functionalities: string[]): Set<string> {
+  return new Set(functionalities.map(normalizeFunctionalityTitle));
+}
+
 export function canAccessFunctionality(moduleTitle: string, functionalityTitle: string, user: AccessUser): boolean {
   if (user.role === "admin") return true;
   const entry = findEntry(user, moduleTitle);
   if (!entry) return false;
-  return entry.functionalities.includes(functionalityTitle);
+  const normalized = normalizeFunctionalityTitle(functionalityTitle);
+  return entry.functionalities.some(f => normalizeFunctionalityTitle(f) === normalized);
 }
 
 export function filterSidebar(
@@ -45,7 +56,7 @@ export function filterSidebar(
     const mod = config.find(m => m.title === entry.access_to);
     if (!mod) continue;
 
-    const allowed = new Set(entry.functionalities);
+    const allowed = normalizeAllowedTitles(entry.functionalities);
 
     const visibleChildren = mod.children.filter(c => {
       if ("type" in c && c.type === "group") {

@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        // Tailwind v4 uses oklab/oklch — html2canvas-pro supports modern color functions
+        html2canvas: 'html2canvas-pro',
       },
     },
     server: {

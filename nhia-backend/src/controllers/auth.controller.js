@@ -1,7 +1,20 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { User } = require("../models");
+const { User, Role } = require("../models");
 const { JWT_SECRET } = require("../middleware/auth");
+
+async function attachRoleMeta(userData) {
+  const roleRecord = await Role.findOne({ where: { key: userData.role } });
+  if (roleRecord) {
+    userData.role_label = roleRecord.label;
+    userData.role_config = {
+      report_scope: roleRecord.report_scope,
+      can_create_monthly: roleRecord.can_create_monthly,
+      can_review_monthly: roleRecord.can_review_monthly,
+    };
+  }
+  return userData;
+}
 
 /** POST /api/auth/login */
 const login = async (req, res, next) => {
@@ -41,6 +54,7 @@ const login = async (req, res, next) => {
     }
     if (!Array.isArray(userData.functionalities)) userData.functionalities = [];
 
+    await attachRoleMeta(userData);
     res.json({ success: true, token, user: userData });
   } catch (err) {
     next(err);
@@ -48,16 +62,31 @@ const login = async (req, res, next) => {
 };
 
 /** GET /api/auth/me */
-const me = async (req, res) => {
-  const userData = req.user.toJSON ? req.user.toJSON() : { ...req.user };
-  delete userData.password;
-  // Parse functionalities JSON string → array if needed
-  if (typeof userData.functionalities === "string") {
-    try { userData.functionalities = JSON.parse(userData.functionalities); }
-    catch { userData.functionalities = []; }
+const me = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: { exclude: ["password"] },
+      include: [
+        { association: "zone",       attributes: ["id", "zonal_code", "description"] },
+        { association: "state",      attributes: ["id", "code", "description"] },
+        { association: "department", attributes: ["id", "name", "department_code"] },
+        { association: "unit",       attributes: ["id", "name", "unit_code"] },
+      ],
+    });
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+    const userData = user.toJSON();
+    if (typeof userData.functionalities === "string") {
+      try { userData.functionalities = JSON.parse(userData.functionalities); }
+      catch { userData.functionalities = []; }
+    }
+    if (!Array.isArray(userData.functionalities)) userData.functionalities = [];
+    await attachRoleMeta(userData);
+    res.json({ success: true, user: userData });
+  } catch (err) {
+    next(err);
   }
-  if (!Array.isArray(userData.functionalities)) userData.functionalities = [];
-  res.json({ success: true, user: userData });
 };
 
 module.exports = { login, me };

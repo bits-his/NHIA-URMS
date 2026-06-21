@@ -142,6 +142,7 @@ interface Props {
   onBack: () => void;
   defaultStateId?: string | null;
   defaultZoneId?:  string | null;
+  canCreate?: boolean;
   FormComponent: React.ComponentType<{
     onBack: () => void;
     defaultZoneId?:  string | null;
@@ -152,7 +153,7 @@ interface Props {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function DeptMonthlyPage({ dept, title, section, onBack, defaultStateId, defaultZoneId, FormComponent }: Props) {
+export default function DeptMonthlyPage({ dept, title, section, onBack, defaultStateId, defaultZoneId, canCreate = true, FormComponent }: Props) {
   const [mode,       setMode]       = React.useState<"list" | "form">("list");
   const [records,    setRecords]    = React.useState<any[]>([]);
   const [loading,    setLoading]    = React.useState(true);
@@ -210,10 +211,12 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
               <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2">
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
               </Button>
+              {canCreate && (
               <Button className="bg-orange-action hover:bg-orange-600 gap-2 shadow-lg shadow-orange-500/20"
                 onClick={() => setMode("form")}>
                 <Plus className="w-4 h-4" /> New Report
               </Button>
+              )}
             </div>
           </div>
 
@@ -298,7 +301,7 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
                     <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
                       <FileText className="w-10 h-10 opacity-30" />
                       <p className="text-sm font-medium">{hasFilters ? "No reports match your filters" : "No reports yet"}</p>
-                      {!hasFilters && (
+                      {!hasFilters && canCreate && (
                         <Button variant="outline" size="sm" onClick={() => setMode("form")} className="mt-2 gap-2">
                           <Plus className="w-4 h-4" /> New Report
                         </Button>

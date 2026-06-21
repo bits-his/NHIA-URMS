@@ -24,6 +24,8 @@ export interface AuthUser {
   zone?:       AuthZonalOffice;
   department?: AuthDepartment;
   unit?:       AuthUnit;
+  role_label?: string;
+  role_config?: { report_scope: string; can_create_monthly: boolean; can_review_monthly: boolean };
 }
 
 interface AuthState {

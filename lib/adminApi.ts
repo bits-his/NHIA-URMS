@@ -25,11 +25,28 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type Role = "admin" | "state-officer" | "zonal-coordinator" | "state-coordinator" | "department-officer" | "sdo" | "hq-department" | "dg-ceo";
+export type Role = string;
+
+export type ReportScope = "national" | "zonal" | "state" | "none";
+
+export interface AppRole {
+  id: number;
+  key: string;
+  label: string;
+  staff_id_prefix: string;
+  report_scope: ReportScope;
+  can_create_monthly: boolean;
+  can_review_monthly: boolean;
+  description?: string | null;
+  is_system: boolean;
+  is_active: boolean;
+}
 
 export interface AdminUser {
   id: number; name: string; staff_id: string; email?: string;
   role: Role; zone_id?: number; state_id?: number; department_id?: number; unit_id?: number;
+  role_label?: string;
+  role_config?: { report_scope: ReportScope; can_create_monthly: boolean; can_review_monthly: boolean };
   /** Structured access — array of {access_to, functionalities[]} */
   functionalities?: { access_to: string; functionalities: string[] }[];
   is_active: boolean; zone?: ZonalOffice; state?: StateOffice; department?: Department; unit?: Unit;
@@ -71,8 +88,10 @@ export const usersApi = {
     request<{ success: boolean; data: AdminUser }>(`/admin/users/${id}/privileges`, {
       method: "PATCH", body: JSON.stringify({ access }),
     }),
-  delete: (id: number) =>
-    request<{ success: boolean; message: string }>(`/admin/users/${id}`, { method: "DELETE" }),
+  deactivate: (id: number) =>
+    request<{ success: boolean; message: string; data: AdminUser }>(`/admin/users/${id}/deactivate`, { method: "PATCH" }),
+  activate: (id: number) =>
+    request<{ success: boolean; message: string; data: AdminUser }>(`/admin/users/${id}/activate`, { method: "PATCH" }),
 };
 
 // Zones
@@ -119,4 +138,16 @@ export const unitsApi = {
     request<{ success: boolean; data: Unit }>(`/admin/units/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   delete: (id: number) =>
     request<{ success: boolean; message: string }>(`/admin/units/${id}`, { method: "DELETE" }),
+};
+
+// Roles
+export const rolesApi = {
+  list: (activeOnly = false) =>
+    request<{ success: boolean; data: AppRole[] }>(`/admin/roles${qs({ active: activeOnly ? "true" : undefined })}`),
+  create: (body: Omit<AppRole, "id" | "is_system">) =>
+    request<{ success: boolean; data: AppRole }>("/admin/roles", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: number, body: Partial<AppRole>) =>
+    request<{ success: boolean; data: AppRole }>(`/admin/roles/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  delete: (id: number) =>
+    request<{ success: boolean; message: string }>(`/admin/roles/${id}`, { method: "DELETE" }),
 };

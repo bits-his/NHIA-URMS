@@ -5,6 +5,7 @@ const StateOffice             = require("./StateOffice");
 const Department              = require("./Department");
 const Unit                    = require("./Unit");
 const { User }                = require("./User");
+const Role                    = require("./Role");
 const StockAsset              = require("./StockAsset");
 const StockVerification       = require("./StockVerification");
 const StockVerificationItem   = require("./StockVerificationItem");
@@ -54,9 +55,12 @@ ProgrammesMonthlyReport.belongsTo(StateOffice, { foreignKey: "state_id", as: "st
 StateOffice.hasMany(SqaMonthlyReport,          { foreignKey: "state_id", as: "sqa_reports"        });
 SqaMonthlyReport.belongsTo(StateOffice,        { foreignKey: "state_id", as: "state"              });
 
+// ── User ↔ Role (by key) ──────────────────────────────────────────────────────
+User.belongsTo(Role, { foreignKey: "role", targetKey: "key", as: "roleRecord", constraints: false });
+
 module.exports = {
   AnnualReport, QuarterlyData,
-  ZonalOffice, StateOffice, Department, Unit, User,
+  ZonalOffice, StateOffice, Department, Unit, User, Role,
   StockAsset, StockVerification, StockVerificationItem,
   FinanceMonthlyReport, ProgrammesMonthlyReport, SqaMonthlyReport,
 };

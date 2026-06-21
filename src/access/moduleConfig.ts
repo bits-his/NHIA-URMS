@@ -39,8 +39,7 @@ export const MODULE_CONFIG: ParentModule[] = [
     title: "Annual Reports",
     roles: "!dg-ceo",
     children: [
-      { title: "New Annual Report", view: "annual-report"       },
-      { title: "My Submissions",    view: "annual-reports-list" },
+      { title: "Annual Report", view: "annual-reports-list" },
     ],
   },
   {
@@ -105,39 +104,6 @@ export const MODULE_CONFIG: ParentModule[] = [
     ],
   },
 
-  // ── Directives ─────────────────────────────────────────────────────────────
-  {
-    title: "Directives",
-    roles: "dg-ceo",
-    children: [{ title: "Directives", view: "directives" }],
-  },
-
-  // ── Reports ────────────────────────────────────────────────────────────────
-  {
-    title: "National Reports",
-    roles: "dg-ceo",
-    children: [{ title: "National Reports", view: "national-reports" }],
-  },
-  {
-    title: "Zonal Performance",
-    roles: "dg-ceo",
-    children: [{ title: "Zonal Performance", view: "zonal-performance" }],
-  },
-
-  // ── HQ Data ────────────────────────────────────────────────────────────────
-  {
-    title: "HQ Data",
-    roles: "all",
-    children: [{ title: "HQ Data", view: "hq-data" }],
-  },
-
-  // ── Archive ────────────────────────────────────────────────────────────────
-  {
-    title: "Archive",
-    roles: "all",
-    children: [{ title: "Archive", view: "archive" }],
-  },
-
   // ── Notifications ──────────────────────────────────────────────────────────
   {
     title: "Notifications",
@@ -145,10 +111,10 @@ export const MODULE_CONFIG: ParentModule[] = [
     children: [{ title: "Notifications", view: "notifications" }],
   },
 
-  // ── Settings (admin only) ──────────────────────────────────────────────────
+  // ── Settings (granted via Privileges) ─────────────────────────────────────
   {
     title: "Settings",
-    roles: "admin",
+    roles: "all",
     children: [{ title: "Settings", view: "settings" }],
   },
 ];
