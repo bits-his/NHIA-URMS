@@ -16,7 +16,7 @@ const baseRules = [
 ];
 
 const reviewers = ["state-coordinator", "zonal-coordinator", "sdo", "admin"];
-const submitters = ["state-officer", "state-coordinator", "admin"];
+const submitters = ["state-officer", "state-coordinator", "department-officer", "admin"];
 
 // ── Finance ───────────────────────────────────────────────────────────────────
 router.get("/finance",                ctrl.finance.list);

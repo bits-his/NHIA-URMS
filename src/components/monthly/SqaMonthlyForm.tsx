@@ -5,12 +5,13 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { monthlyApi } from "@/lib/api";
 import MonthlyFormShell from "./MonthlyFormShell";
+import { currentReportingYear } from "./reportingYears";
 
 // HMO/HCP Quality Assurance section
 // Covers: HCF counts, CEmONC, FFP, QA conducted, Accreditation, Mystery Shopping
 // Complaints are handled separately in ComplaintsMonthlyForm
 
-interface Props { onBack: () => void; defaultZoneId?: string | null; defaultStateId?: string | null; onSubmitted?: () => void; }
+interface Props { onBack: () => void; defaultZoneId?: string | null; defaultStateId?: string | null; onSubmitted?: () => void; yearOptions?: string[]; }
 const n = (v: string) => v === "" ? null : Number(v);
 
 const Field = ({ label, value, onChange }: { label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
@@ -20,9 +21,9 @@ const Field = ({ label, value, onChange }: { label: string; value: string; onCha
   </div>
 );
 
-export default function SqaMonthlyForm({ onBack, defaultZoneId, defaultStateId, onSubmitted }: Props) {
-  const [stateId, setStateId] = React.useState("");
-  const [year,    setYear]    = React.useState("2025");
+export default function SqaMonthlyForm({ onBack, defaultZoneId, defaultStateId, onSubmitted, yearOptions }: Props) {
+  const [stateId, setStateId] = React.useState(defaultStateId ?? "");
+  const [year,    setYear]    = React.useState(currentReportingYear());
   const [month,   setMonth]   = React.useState("");
   const [refId,   setRefId]   = React.useState<string | null>(null);
   const [savedId, setSavedId] = React.useState<number | null>(null);
@@ -88,7 +89,7 @@ export default function SqaMonthlyForm({ onBack, defaultZoneId, defaultStateId, 
     <MonthlyFormShell title="HMO/HCP Quality Assurance Monthly Report" dept="SQA"
       refId={refId} stateId={stateId} setStateId={setStateId}
       year={year} setYear={setYear} month={month} setMonth={setMonth}
-      onBack={onBack} defaultZoneId={defaultZoneId} defaultStateId={defaultStateId} onSave={handleSave} onSubmit={handleSubmit}
+      onBack={onBack} defaultZoneId={defaultZoneId} defaultStateId={defaultStateId} yearOptions={yearOptions} onSave={handleSave} onSubmit={handleSubmit}
       isSaving={isSaving} isSubmitting={isSubmitting}>
 
       {/* HCF Overview */}

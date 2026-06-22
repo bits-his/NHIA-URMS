@@ -8,13 +8,15 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { stockApi } from "@/lib/api";
 
+import { buildReportingYearOptions } from "./reportingYears";
+
 export const MONTHS = [
   { v: "1", l: "January" }, { v: "2", l: "February" }, { v: "3", l: "March" },
   { v: "4", l: "April" },   { v: "5", l: "May" },      { v: "6", l: "June" },
   { v: "7", l: "July" },    { v: "8", l: "August" },   { v: "9", l: "September" },
   { v: "10", l: "October" },{ v: "11", l: "November" },{ v: "12", l: "December" },
 ];
-export const YEARS = ["2025","2024","2023","2022"];
+export const YEARS = buildReportingYearOptions();
 
 interface Props {
   title: string; dept: string; refId: string | null;
@@ -28,13 +30,15 @@ interface Props {
   // Optional defaults from user context
   defaultZoneId?:  string | null;
   defaultStateId?: string | null;
+  yearOptions?: string[];
 }
 
 export default function MonthlyFormShell({
   title, dept, refId, stateId, setStateId, year, setYear, month, setMonth,
   onBack, onSave, onSubmit, isSaving, isSubmitting, children,
-  defaultZoneId, defaultStateId,
+  defaultZoneId, defaultStateId, yearOptions,
 }: Props) {
+  const years = yearOptions?.length ? yearOptions : buildReportingYearOptions();
   const [zones,  setZones]  = React.useState<any[]>([]);
   const [states, setStates] = React.useState<any[]>([]);
   const [zoneId, setZoneId] = React.useState(defaultZoneId ?? "");
@@ -60,14 +64,18 @@ export default function MonthlyFormShell({
     }).catch(() => {});
   }, [zoneId]);
 
-  // If defaultZoneId provided, trigger state load on mount
+  // Sync defaults when user context arrives
   React.useEffect(() => {
     if (defaultZoneId) setZoneId(defaultZoneId);
   }, [defaultZoneId]);
 
+  React.useEffect(() => {
+    if (defaultStateId) setStateId(defaultStateId);
+  }, [defaultStateId]);
+
   return (
     <div className="flex flex-col h-full bg-slate-50/30">
-      <div className="bg-white border-b border-border/50 px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+      <div className="bg-white border-b border-border/50 px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
             <ArrowLeft className="w-5 h-5" />
@@ -99,9 +107,9 @@ export default function MonthlyFormShell({
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-4xl mx-auto p-8 space-y-6">
+        <div className="w-full px-4 md:px-6 py-4 space-y-4">
           {/* Period + Location selector */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 bg-white rounded-2xl border border-[#d4e8dc]">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-white rounded-2xl border border-[#d4e8dc]">
             <div className="space-y-2">
               <Label className="text-xs font-bold">Zone <span className="text-red-500">*</span></Label>
               <Select value={zoneId} onValueChange={setZoneId}>
@@ -128,7 +136,7 @@ export default function MonthlyFormShell({
                 <SelectTrigger className="w-full" displayValue={year || "Select Year"}>
                   <SelectValue placeholder="Select Year" />
                 </SelectTrigger>
-                <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+                <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2">

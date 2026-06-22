@@ -5,17 +5,18 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { monthlyApi } from "@/lib/api";
 import MonthlyFormShell from "./MonthlyFormShell";
+import { currentReportingYear } from "./reportingYears";
 
 // Enrollment Enquiries & Outreach Officer section
 // Covers: Stakeholder meetings, Media appearances, Marketing/Sensitization
 // Enrolment scheme figures are in ProgrammesMonthlyForm
 
-interface Props { onBack: () => void; defaultZoneId?: string | null; defaultStateId?: string | null; onSubmitted?: () => void; }
+interface Props { onBack: () => void; defaultZoneId?: string | null; defaultStateId?: string | null; onSubmitted?: () => void; yearOptions?: string[]; }
 const n = (v: string) => v === "" ? null : Number(v);
 
-export default function OutreachMonthlyForm({ onBack, defaultZoneId, defaultStateId, onSubmitted }: Props) {
-  const [stateId, setStateId] = React.useState("");
-  const [year,    setYear]    = React.useState("2025");
+export default function OutreachMonthlyForm({ onBack, defaultZoneId, defaultStateId, onSubmitted, yearOptions }: Props) {
+  const [stateId, setStateId] = React.useState(defaultStateId ?? "");
+  const [year,    setYear]    = React.useState(currentReportingYear());
   const [month,   setMonth]   = React.useState("");
   const [refId,   setRefId]   = React.useState<string | null>(null);
   const [savedId, setSavedId] = React.useState<number | null>(null);
@@ -71,7 +72,7 @@ export default function OutreachMonthlyForm({ onBack, defaultZoneId, defaultStat
     <MonthlyFormShell title="Enrollment Enquiries & Outreach Monthly Report" dept="Programmes — Outreach"
       refId={refId} stateId={stateId} setStateId={setStateId}
       year={year} setYear={setYear} month={month} setMonth={setMonth}
-      onBack={onBack} defaultZoneId={defaultZoneId} defaultStateId={defaultStateId} onSave={handleSave} onSubmit={handleSubmit}
+      onBack={onBack} defaultZoneId={defaultZoneId} defaultStateId={defaultStateId} yearOptions={yearOptions} onSave={handleSave} onSubmit={handleSubmit}
       isSaving={isSaving} isSubmitting={isSubmitting}>
 
       <Card className="rounded-2xl border-[#d4e8dc]">

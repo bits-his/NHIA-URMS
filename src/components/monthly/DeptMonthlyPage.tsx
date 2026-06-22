@@ -13,7 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { monthlyApi, type MonthlyDept } from "@/lib/api";
-import { MONTHS, YEARS } from "./MonthlyFormShell";
+import { MONTHS } from "./MonthlyFormShell";
+import { buildReportingYearOptions } from "./reportingYears";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
@@ -67,7 +68,8 @@ function DetailPanel({ record, onClose }: { record: any; onClose: () => void }) 
     extra_dependants: "Extra Dependants", extra_dependant_premium: "Premium on Extra-Dependant (₦)",
     additional_dependants: "Additional Dependants", change_of_provider: "Change of Provider",
     bhcpf_beneficiaries: "BHCPF Beneficiaries", bhcpf_facilities: "BHCPF Accredited Facilities",
-    tiship_lives: "TISHIP Lives", mha_lives: "MHA Lives", sshia_lives: "SSHIA Lives",
+    tiship_lives: "TISHIP Lives", participating_institutions: "Total No. of Participating Institutions",
+    mha_lives: "MHA Lives", sshia_lives: "SSHIA Lives",
     stakeholder_meetings: "Stakeholder Meetings", media_appearances: "Media Appearances",
     marketing_sensitization: "Marketing / Sensitization Events",
     total_hcf_under_nhia: "Total HCF Under NHIA", total_accredited_hcf: "Total Accredited HCFs",
@@ -148,6 +150,7 @@ interface Props {
     defaultZoneId?:  string | null;
     defaultStateId?: string | null;
     onSubmitted?: () => void;
+    yearOptions?: string[];
   }>;
 }
 
@@ -191,13 +194,18 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
 
   const hasFilters = filterYear !== "all" || filterMonth !== "all" || filterStatus !== "all";
 
+  const yearOptions = React.useMemo(
+    () => buildReportingYearOptions(records.map(r => r.reporting_year)),
+    [records],
+  );
+
   // ── List view ──────────────────────────────────────────────────────────────
   if (mode === "list") {
     return (
       <>
         <div className="flex flex-col h-full bg-slate-50/30">
           {/* Header */}
-          <div className="bg-white border-b border-border/50 px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+          <div className="bg-white border-b border-border/50 px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
                 <ArrowLeft className="w-5 h-5" />
@@ -221,7 +229,7 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="max-w-6xl mx-auto p-8 space-y-6">
+            <div className="w-full px-4 md:px-6 py-4 space-y-4">
 
               {/* Summary cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -248,7 +256,7 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Years</SelectItem>
-                    {YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                    {yearOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
@@ -388,6 +396,7 @@ export default function DeptMonthlyPage({ dept, title, section, onBack, defaultS
           onBack={() => setMode("list")}
           defaultZoneId={defaultZoneId}
           defaultStateId={defaultStateId}
+          yearOptions={yearOptions}
           onSubmitted={() => { setMode("list"); load(); }}
         />
       </motion.div>

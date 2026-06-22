@@ -6,10 +6,10 @@ export function getMonthlyReportContext(role: string, user?: {
   const stateScoped = user?.role_config?.report_scope === "state"
     || (!user?.role_config && ["state-officer", "state-coordinator", "department-officer"].includes(role));
   const canCreate = user?.role_config?.can_create_monthly
-    ?? ["state-officer", "state-coordinator", "admin"].includes(role);
+    ?? ["state-officer", "state-coordinator", "department-officer", "admin"].includes(role);
   return {
     defaultStateId: stateScoped && user?.state_id ? String(user.state_id) : null,
-    defaultZoneId: (user?.role_config?.report_scope === "zonal" || role === "zonal-coordinator") && user?.zone_id ? String(user.zone_id) : null,
+    defaultZoneId: user?.zone_id ? String(user.zone_id) : null,
     canCreateMonthly: canCreate,
   };
 }

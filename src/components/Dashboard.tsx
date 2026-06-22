@@ -540,15 +540,7 @@ export default function Dashboard({ role, user, access = [], functionalities = "
               <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="relative z-10 p-6 max-w-7xl mx-auto space-y-6"
               >
-                {/* Page header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                      Good morning, {user?.name?.split(" ")[0] || userInfo.initials} 👋
-                    </h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Here's your NHIA Reporting Management Dashboard overview for today.</p>
-                  </div>
-                </div>
+                
 
                 {/* KPI row — hidden for SDO, Zonal Coordinator, State Officer, State Coordinator, Department Officer and Admin (have their own KPIs) */}
                 {role !== "sdo" && role !== "zonal-coordinator" && role !== "state-officer" && role !== "state-coordinator" && role !== "department-officer" && role !== "admin" && (

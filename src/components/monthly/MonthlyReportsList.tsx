@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { monthlyApi, type MonthlyDept } from "@/lib/api";
-import { MONTHS, YEARS } from "./MonthlyFormShell";
+import { MONTHS } from "./MonthlyFormShell";
+import { buildReportingYearOptions } from "./reportingYears";
 
 const DEPT_OPTIONS: { value: MonthlyDept; label: string }[] = [
   { value: "finance",    label: "Finance" },
@@ -70,6 +71,11 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
     draft:     records.filter(r => r.status === "draft").length,
   }), [records]);
 
+  const yearOptions = React.useMemo(
+    () => buildReportingYearOptions(records.map(r => r.reporting_year)),
+    [records],
+  );
+
   return (
     <div className="flex flex-col h-full bg-slate-50/30">
       <div className="bg-white border-b border-border/50 px-8 py-4 flex items-center justify-between sticky top-0 z-30">
@@ -94,7 +100,7 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-7xl mx-auto p-8 space-y-6">
+        <div className="w-full px-4 md:px-6 py-4 space-y-4">
 
           {/* Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -132,7 +138,7 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Years</SelectItem>
-                    {YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                    {yearOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filterMonth} onValueChange={setFilterMonth}>

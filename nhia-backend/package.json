@@ -9,7 +9,10 @@
     "db:sync": "node src/scripts/syncDb.js",
     "db:migrate-monthly": "node src/scripts/addMonthlyApprovalColumns.js",
     "db:migrate-roles": "node src/scripts/migrateRoles.js",
-    "db:migrate-depts": "node src/scripts/migrateDepartmentsUnits.js"
+    "db:migrate-depts": "node src/scripts/migrateDepartmentsUnits.js",
+    "db:seed-users": "node src/scripts/seedUsers.js",
+    "db:migrate-participating-institutions": "node src/scripts/addParticipatingInstitutions.js",
+    "db:generate-seed-monthly": "python3 scripts/generate_seed_monthly_from_excel.py"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

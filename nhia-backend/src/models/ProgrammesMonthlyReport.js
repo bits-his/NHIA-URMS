@@ -26,6 +26,7 @@ const ProgrammesMonthlyReport = sequelize.define("ProgrammesMonthlyReport", {
   bhcpf_beneficiaries:   { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: 0 },
   bhcpf_facilities:      { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: 0 },
   tiship_lives:          { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: 0 },
+  participating_institutions: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: 0 },
   mha_lives:             { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: 0 },
   sshia_lives:           { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, defaultValue: 0 },
   // Outreach

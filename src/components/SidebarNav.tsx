@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AccessEntry } from "@/src/access/types";
-import { MODULE_CONFIG, type ChildModule, type SubGroup } from "@/src/access/moduleConfig";
+import { MODULE_CONFIG, type ChildModule, type SubGroup, hasRoutableView } from "@/src/access/moduleConfig";
 import { hasModuleAccess } from "@/src/access/roles";
 import { normalizeAllowedTitles } from "@/src/access/accessUtils";
 
@@ -94,6 +94,20 @@ function NavSubGroup({ group, allowedTitles, currentView, setView, sidebarOpen }
 }) {
   const visibleChildren = group.children.filter(c => allowedTitles.has(c.title));
   if (visibleChildren.length === 0) return null;
+
+  // Single routable leaf (e.g. only "Monthly Report") — open directly, no extra dropdown
+  if (visibleChildren.length === 1 && visibleChildren[0].view) {
+    return (
+      <NavLeaf
+        title={group.label}
+        nodeView={visibleChildren[0].view}
+        currentView={currentView}
+        setView={setView}
+        depth={1}
+        sidebarOpen={sidebarOpen}
+      />
+    );
+  }
 
   const hasActive = visibleChildren.some(c => c.view && currentView === c.view);
   const [open, setOpen] = React.useState(hasActive);
@@ -292,6 +306,7 @@ export default function SidebarNav({ role, access, view, setView, sidebarOpen }:
 
         {visibleModules.map(({ mod, allowedTitles }, i) => {
           if (mod.title === "Notifications" || mod.title === "Settings") return null;
+          if (!hasRoutableView(mod)) return null;
 
           // Single-child modules with a direct view — render as flat leaf
           const flatChildren = mod.children.filter(c => !("type" in c)) as ChildModule[];

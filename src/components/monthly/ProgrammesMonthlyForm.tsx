@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { monthlyApi } from "@/lib/api";
 import MonthlyFormShell from "./MonthlyFormShell";
+import { currentReportingYear } from "./reportingYears";
 
 // Enrolment section — all scheme enrolment & premium figures
 // Outreach/advocacy is handled separately in OutreachMonthlyForm
 
-interface Props { onBack: () => void; defaultZoneId?: string | null; defaultStateId?: string | null; onSubmitted?: () => void; }
+interface Props { onBack: () => void; defaultZoneId?: string | null; defaultStateId?: string | null; onSubmitted?: () => void; yearOptions?: string[]; }
 const n = (v: string) => v === "" ? null : Number(v);
 
 const Field = ({ label, value, onChange, naira }: {
@@ -24,9 +25,9 @@ const Field = ({ label, value, onChange, naira }: {
   </div>
 );
 
-export default function ProgrammesMonthlyForm({ onBack, defaultZoneId, defaultStateId, onSubmitted }: Props) {
-  const [stateId, setStateId] = React.useState("");
-  const [year,    setYear]    = React.useState("2025");
+export default function ProgrammesMonthlyForm({ onBack, defaultZoneId, defaultStateId, onSubmitted, yearOptions }: Props) {
+  const [stateId, setStateId] = React.useState(defaultStateId ?? "");
+  const [year,    setYear]    = React.useState(currentReportingYear());
   const [month,   setMonth]   = React.useState("");
   const [refId,   setRefId]   = React.useState<string | null>(null);
   const [savedId, setSavedId] = React.useState<number | null>(null);
@@ -40,7 +41,7 @@ export default function ProgrammesMonthlyForm({ onBack, defaultZoneId, defaultSt
     extra_dependants: "", extra_dependant_premium: "",
     additional_dependants: "", change_of_provider: "",
     bhcpf_beneficiaries: "", bhcpf_facilities: "",
-    tiship_lives: "", mha_lives: "", sshia_lives: "",
+    tiship_lives: "", participating_institutions: "", mha_lives: "", sshia_lives: "",
   });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF(p => ({ ...p, [k]: e.target.value }));
@@ -58,7 +59,8 @@ export default function ProgrammesMonthlyForm({ onBack, defaultZoneId, defaultSt
     extra_dependants: n(f.extra_dependants), extra_dependant_premium: n(f.extra_dependant_premium),
     additional_dependants: n(f.additional_dependants), change_of_provider: n(f.change_of_provider),
     bhcpf_beneficiaries: n(f.bhcpf_beneficiaries), bhcpf_facilities: n(f.bhcpf_facilities),
-    tiship_lives: n(f.tiship_lives), mha_lives: n(f.mha_lives), sshia_lives: n(f.sshia_lives),
+    tiship_lives: n(f.tiship_lives), participating_institutions: n(f.participating_institutions),
+    mha_lives: n(f.mha_lives), sshia_lives: n(f.sshia_lives),
     submitted_by: `Enrolment — State ${stateId}`, status, section: "enrolment",
   });
 
@@ -92,7 +94,7 @@ export default function ProgrammesMonthlyForm({ onBack, defaultZoneId, defaultSt
     <MonthlyFormShell title="Enrolment Monthly Report" dept="Programmes — Enrolment"
       refId={refId} stateId={stateId} setStateId={setStateId}
       year={year} setYear={setYear} month={month} setMonth={setMonth}
-      onBack={onBack} defaultZoneId={defaultZoneId} defaultStateId={defaultStateId} onSave={handleSave} onSubmit={handleSubmit}
+      onBack={onBack} defaultZoneId={defaultZoneId} defaultStateId={defaultStateId} yearOptions={yearOptions} onSave={handleSave} onSubmit={handleSubmit}
       isSaving={isSaving} isSubmitting={isSubmitting}>
 
       {/* GIFSHIP */}
@@ -124,6 +126,7 @@ export default function ProgrammesMonthlyForm({ onBack, defaultZoneId, defaultSt
           <Field label="BHCPF Beneficiaries" value={f.bhcpf_beneficiaries} onChange={set("bhcpf_beneficiaries")} />
           <Field label="BHCPF Accredited Facilities" value={f.bhcpf_facilities} onChange={set("bhcpf_facilities")} />
           <Field label="TISHIP Lives" value={f.tiship_lives} onChange={set("tiship_lives")} />
+          <Field label="Total No. of Participating Institutions" value={f.participating_institutions} onChange={set("participating_institutions")} />
           <Field label="MHA Lives" value={f.mha_lives} onChange={set("mha_lives")} />
           <Field label="SSHIA Lives" value={f.sshia_lives} onChange={set("sshia_lives")} />
         </CardContent>

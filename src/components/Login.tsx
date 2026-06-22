@@ -163,31 +163,6 @@ export default function Login({ onLogin }: LoginProps) {
                 </div>
               </div>
 
-              {/* Role — hidden for admin (auto-detected) */}
-              {!isAdmin && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Access Role</label>
-                <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="h-11 rounded-xl border-[#d4e8dc] bg-[#f4f7f5] text-sm focus:ring-2 focus:ring-[#25a872]">
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-[#d4e8dc]">
-                    {ROLES.map(r => (
-                      <SelectItem key={r.value} value={r.value} className="text-sm rounded-lg">{r.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <AnimatePresence>
-                  {role && (
-                    <motion.p initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                      className="text-[10px] text-[#145c3f] font-semibold flex items-center gap-1"
-                    >
-                      <ChevronRight className="w-3 h-3" /> Auto-detected from Staff ID
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-              )}
 
               {/* Error */}
               <AnimatePresence>

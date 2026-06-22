@@ -131,3 +131,13 @@ export function flatLeaves(mod: ParentModule): string[] {
   }
   return out;
 }
+
+/** True if the module has at least one child with a routable view */
+export function hasRoutableView(mod: ParentModule): boolean {
+  return mod.children.some(c => {
+    if ("type" in c && c.type === "group") {
+      return c.children.some(leaf => !!leaf.view);
+    }
+    return !!(c as ChildModule).view;
+  });
+}
