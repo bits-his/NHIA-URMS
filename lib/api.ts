@@ -201,10 +201,15 @@ export const stockApi = {
       `/stock/units${departmentId ? `?department_id=${departmentId}` : ""}`
     ),
 
-  getAssets: (stateId?: number | string, unitId?: number | string) => {
+  getAssets: (
+    stateId?: number | string,
+    unitId?: number | string,
+    status: "all" | "active" | "inactive" = "all",
+  ) => {
     const params = new URLSearchParams();
     if (stateId) params.set("state_id", String(stateId));
     if (unitId)  params.set("unit_id",  String(unitId));
+    params.set("status", status);
     const qs = params.toString();
     return request<{ success: boolean; data: any[] }>(`/stock/assets${qs ? `?${qs}` : ""}`);
   },
@@ -219,9 +224,9 @@ export const stockApi = {
       method: "PUT", body: JSON.stringify(payload),
     }),
 
-  deleteAsset: (id: number | string) =>
-    request<{ success: boolean; message: string }>(`/stock/assets/${id}`, {
-      method: "DELETE",
+  setAssetStatus: (id: number | string, is_active: boolean) =>
+    request<{ success: boolean; message: string; data: any }>(`/stock/assets/${id}/status`, {
+      method: "PATCH", body: JSON.stringify({ is_active }),
     }),
 
   listVerifications: (filters?: { zone_id?: string; state_id?: string; status?: string; type?: string }) => {

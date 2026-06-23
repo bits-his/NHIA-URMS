@@ -34,7 +34,11 @@ interface ItemRow {
 
 interface StockVerificationPageProps {
   onBack: () => void;
+  verificationId?: number | null;
 }
+
+const labelOf = (options: DropdownOption[], value: string, fallback: string) =>
+  value ? (options.find(o => String(o.id) === value)?.label ?? fallback) : fallback;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,9 +61,13 @@ const STOCKTAKING_TYPES = [
   { value: "surprise", label: "Surprise" },
 ];
 
+const typeLabel = (value: string) =>
+  value ? (STOCKTAKING_TYPES.find(t => t.value === value)?.label ?? value) : "Select Type";
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function StockVerificationPage({ onBack }: StockVerificationPageProps) {
+export default function StockVerificationPage({ onBack, verificationId }: StockVerificationPageProps) {
+  const hydratingRef = React.useRef(false);
   // ── Dropdown data ──────────────────────────────────────────────────────────
   const [zones,       setZones]       = React.useState<DropdownOption[]>([]);
   const [states,      setStates]      = React.useState<DropdownOption[]>([]);
@@ -82,6 +90,7 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
 
   // ── UI state ───────────────────────────────────────────────────────────────
   const [loadingAssets, setLoadingAssets] = React.useState(false);
+  const [loadingRecord, setLoadingRecord] = React.useState(false);
   const [saving,        setSaving]        = React.useState(false);
   const [submitting,    setSubmitting]    = React.useState(false);
   const [savedId,       setSavedId]       = React.useState<number | null>(null);
@@ -96,6 +105,7 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
 
   // ── Cascade: zone → states ─────────────────────────────────────────────────
   React.useEffect(() => {
+    if (hydratingRef.current) return;
     setStateId(""); setStates([]);
     setDepartmentId(""); setDepartments([]);
     setUnitId(""); setUnits([]);
@@ -105,8 +115,9 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
     ).catch(() => {});
   }, [zoneId]);
 
-  // ── Cascade: state → departments + assets ─────────────────────────────────
+  // ── Cascade: state → departments ───────────────────────────────────────────
   React.useEffect(() => {
+    if (hydratingRef.current) return;
     setDepartmentId(""); setDepartments([]);
     setUnitId(""); setUnits([]);
     if (!stateId) return;
@@ -118,6 +129,7 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
 
   // ── Cascade: department → units ────────────────────────────────────────────
   React.useEffect(() => {
+    if (hydratingRef.current) return;
     setUnitId(""); setUnits([]);
     if (!departmentId) return;
     stockApi.getUnits(departmentId).then(r =>
@@ -125,19 +137,99 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
     ).catch(() => {});
   }, [departmentId]);
 
-  // ── Cascade: unit → assets ─────────────────────────────────────────────────
+  // ── Cascade: unit → assets (new verifications only) ────────────────────────
   React.useEffect(() => {
+    if (hydratingRef.current || savedId) return;
     if (!stateId) return;
     loadAssets(stateId, unitId);
   }, [unitId]);
 
+  // ── Load existing verification when opened from My Verifications ─────────────
+  React.useEffect(() => {
+    if (!verificationId) {
+      setSavedId(null);
+      setRefId(null);
+      setZoneId(""); setStateId(""); setDepartmentId(""); setUnitId("");
+      setStockType(""); setStoreKeeper(""); setAuditOfficer(""); setVerDate("");
+      setItems([emptyRow()]);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setLoadingRecord(true);
+      hydratingRef.current = true;
+      try {
+        const res = await stockApi.getVerification(verificationId);
+        if (cancelled) return;
+        const v = res.data;
+
+        const zoneIdStr = String(v.zone_id);
+        const stateIdStr = String(v.state_id);
+        const deptIdStr = v.department_id ? String(v.department_id) : "";
+        const unitIdStr = v.unit_id ? String(v.unit_id) : "";
+
+        const statesRes = await stockApi.getStates(zoneIdStr);
+        const stateOpts = statesRes.data.map((s: any) => ({ id: s.id, label: s.description }));
+        setStates(stateOpts);
+
+        let deptOpts: DropdownOption[] = [];
+        if (stateIdStr) {
+          const deptsRes = await stockApi.getDepartments(stateIdStr);
+          deptOpts = deptsRes.data.map((d: any) => ({ id: d.id, label: d.name }));
+          setDepartments(deptOpts);
+        }
+
+        let unitOpts: DropdownOption[] = [];
+        if (deptIdStr) {
+          const unitsRes = await stockApi.getUnits(deptIdStr);
+          unitOpts = unitsRes.data.map((u: any) => ({ id: u.id, label: u.name }));
+          setUnits(unitOpts);
+        }
+
+        setSavedId(v.id);
+        setRefId(v.reference_id);
+        setZoneId(zoneIdStr);
+        setStateId(stateIdStr);
+        setDepartmentId(deptIdStr);
+        setUnitId(unitIdStr);
+        setStockType(v.stocktaking_type || "");
+        setStoreKeeper(v.store_keeper || "");
+        setAuditOfficer(v.audit_officer || "");
+        setVerDate(v.verification_date ? String(v.verification_date).slice(0, 10) : "");
+
+        if (v.items?.length) {
+          setItems(v.items.map((item: any) => ({
+            _key: uid(),
+            asset_id: item.asset_id ?? null,
+            item_class: item.item_class || "",
+            item_description: item.item_description || "",
+            asset_tag: item.asset_tag || "",
+            book_balance: String(item.book_balance ?? ""),
+            physical_count: String(item.physical_count ?? ""),
+            condition: (item.condition === "bad" ? "bad" : "good") as "good" | "bad",
+            remarks: item.remarks || "",
+          })));
+        } else {
+          setItems([emptyRow()]);
+        }
+      } catch (err: any) {
+        if (!cancelled) toast.error("Failed to load verification", { description: err.message });
+      } finally {
+        hydratingRef.current = false;
+        if (!cancelled) setLoadingRecord(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [verificationId]);
+
   const loadAssets = async (sid: string, uid_: string) => {
     setLoadingAssets(true);
     try {
-      const r = await stockApi.getAssets(sid, uid_ || undefined);
+      const r = await stockApi.getAssets(sid, uid_ || undefined, "active");
       setAssets(r.data);
-      // Pre-populate table rows from assets
-      if (r.data.length > 0) {
+      if (r.data.length > 0 && !savedId) {
         setItems(r.data.map((a: any) => ({
           _key: uid(),
           asset_id: a.id,
@@ -276,6 +368,13 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
 
       <ScrollArea className="flex-1">
         <div className="max-w-7xl mx-auto p-8 space-y-6">
+          {loadingRecord ? (
+            <div className="flex items-center justify-center py-24 gap-3 text-slate-400">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span className="text-sm">Loading verification...</span>
+            </div>
+          ) : (
+          <>
 
           {/* ── Header form ── */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -290,10 +389,9 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
                   <div className="space-y-2">
                     <Label>Zone <span className="text-red-500">*</span></Label>
                     <Select value={zoneId} onValueChange={setZoneId}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Zone">
-                          {zoneId ? zones.find(z => String(z.id) === zoneId)?.label : "Select Zone"}
-                        </SelectValue>
+                      <SelectTrigger className="w-full"
+                        displayValue={labelOf(zones, zoneId, "Select Zone")}>
+                        <SelectValue placeholder="Select Zone" />
                       </SelectTrigger>
                       <SelectContent>
                         {zones.map(z => <SelectItem key={z.id} value={String(z.id)}>{z.label}</SelectItem>)}
@@ -303,10 +401,9 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
                   <div className="space-y-2">
                     <Label>State <span className="text-red-500">*</span></Label>
                     <Select value={stateId} onValueChange={setStateId} disabled={!zoneId}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select State">
-                          {stateId ? states.find(s => String(s.id) === stateId)?.label : "Select State"}
-                        </SelectValue>
+                      <SelectTrigger className="w-full"
+                        displayValue={labelOf(states, stateId, "Select State")}>
+                        <SelectValue placeholder="Select State" />
                       </SelectTrigger>
                       <SelectContent>
                         {states.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.label}</SelectItem>)}
@@ -316,10 +413,9 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
                   <div className="space-y-2">
                     <Label>Department</Label>
                     <Select value={departmentId} onValueChange={setDepartmentId} disabled={!stateId}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Department">
-                          {departmentId ? departments.find(d => String(d.id) === departmentId)?.label : "Select Department"}
-                        </SelectValue>
+                      <SelectTrigger className="w-full"
+                        displayValue={labelOf(departments, departmentId, "Select Department")}>
+                        <SelectValue placeholder="Select Department" />
                       </SelectTrigger>
                       <SelectContent>
                         {departments.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.label}</SelectItem>)}
@@ -329,10 +425,9 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
                   <div className="space-y-2">
                     <Label>Unit</Label>
                     <Select value={unitId} onValueChange={setUnitId} disabled={!departmentId}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select Unit">
-                          {unitId ? units.find(u => String(u.id) === unitId)?.label : "Select Unit"}
-                        </SelectValue>
+                      <SelectTrigger className="w-full"
+                        displayValue={labelOf(units, unitId, "Select Unit")}>
+                        <SelectValue placeholder="Select Unit" />
                       </SelectTrigger>
                       <SelectContent>
                         {units.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.label}</SelectItem>)}
@@ -348,7 +443,9 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
                   <div className="space-y-2">
                     <Label>Stocktaking Type <span className="text-red-500">*</span></Label>
                     <Select value={stockType} onValueChange={setStockType}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Select Type" /></SelectTrigger>
+                      <SelectTrigger className="w-full" displayValue={typeLabel(stockType)}>
+                        <SelectValue placeholder="Select Type" />
+                      </SelectTrigger>
                       <SelectContent>
                         {STOCKTAKING_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                       </SelectContent>
@@ -478,7 +575,8 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
                                   value={row.condition}
                                   onValueChange={v => updateRow(row._key, "condition", v)}
                                 >
-                                  <SelectTrigger className="h-8 text-xs w-full">
+                                  <SelectTrigger className="h-8 text-xs w-full"
+                                    displayValue={row.condition === "bad" ? "Bad" : "Good"}>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -577,6 +675,8 @@ export default function StockVerificationPage({ onBack }: StockVerificationPageP
             </div>
           </div>
 
+          </>
+          )}
         </div>
       </ScrollArea>
     </div>

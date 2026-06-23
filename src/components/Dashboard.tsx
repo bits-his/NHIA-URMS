@@ -781,11 +781,14 @@ export default function Dashboard({ role, user, access = [], functionalities = "
                 onBack={() => setView("annual-reports-list")}
               />
             ) : view === "stock-verification" ? (
-              <StockVerificationPage onBack={() => setView("stock-verifications-list")} />
+              <StockVerificationPage
+                verificationId={selectedVerifId}
+                onBack={() => { setSelectedVerifId(null); setView("stock-verifications-list"); }}
+              />
             ) : view === "stock-verifications-list" ? (
               <StockVerificationsList
                 onBack={() => setView("home")}
-                onNew={() => setView("stock-verification")}
+                onNew={() => { setSelectedVerifId(null); setView("stock-verification"); }}
                 onView={(id) => { setSelectedVerifId(id); setView("stock-verification"); }}
               />
             ) : view === "stock-assets" ? (

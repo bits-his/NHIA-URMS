@@ -31,6 +31,10 @@ interface Props {
   onView: (id: number) => void;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  all: "All Statuses", draft: "Draft", submitted: "Submitted", approved: "Approved",
+};
+
 const STATUS_CONFIG = {
   draft:     { label: "Draft",     cls: "bg-slate-100 text-slate-600 border-slate-200",       icon: <FileText className="w-3 h-3" /> },
   submitted: { label: "Submitted", cls: "bg-blue-100 text-blue-700 border-blue-200",          icon: <Clock className="w-3 h-3" /> },
@@ -38,7 +42,7 @@ const STATUS_CONFIG = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  annual: "Annual", monthly: "Monthly", periodic: "Periodic", surprise: "Surprise",
+  all: "All Types", annual: "Annual", monthly: "Monthly", periodic: "Periodic", surprise: "Surprise",
 };
 
 function safeDate(v: string | null | undefined) {
@@ -121,7 +125,10 @@ export default function StockVerificationsList({ onBack, onNew, onView }: Props)
             <CardContent className="pt-4 pb-4">
               <div className="flex gap-3 items-center">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectTrigger className="w-[150px]"
+                    displayValue={STATUS_LABELS[filterStatus] ?? "Status"}>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
@@ -130,7 +137,10 @@ export default function StockVerificationsList({ onBack, onNew, onView }: Props)
                   </SelectContent>
                 </Select>
                 <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-[150px]"><SelectValue placeholder="Type" /></SelectTrigger>
+                  <SelectTrigger className="w-[150px]"
+                    displayValue={TYPE_LABELS[filterType] ?? "Type"}>
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="annual">Annual</SelectItem>
