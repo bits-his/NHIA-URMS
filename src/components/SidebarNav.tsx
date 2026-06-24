@@ -27,6 +27,7 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
   "Dashboard":            <Home className="w-4 h-4" />,
   "Annual Reports":       <FileText className="w-4 h-4" />,
   "Finance & Admin":      <Banknote className="w-4 h-4" />,
+  "Finance & Admin Dept": <Banknote className="w-4 h-4" />,
   "Standards & Quality":  <ShieldCheck className="w-4 h-4" />,
   "ICT Support":          <Wifi className="w-4 h-4" />,
   "Programmes":           <LayoutGrid className="w-4 h-4" />,
@@ -51,6 +52,9 @@ const PATH_TO_VIEW: Record<string, string> = {
   "/annual-reports/review":       "zonal-review",
   "/sdo/stock-verification":        "stock-verifications-list",
   "/sdo/assets":                  "stock-assets",
+  "/sdo/servicom":                "servicom-dashboard",
+  "/sdo/servicom/visits":         "servicom-visits",
+  "/sdo/servicom/complaints":     "servicom-complaints",
   "/notifications":               "notifications",
   "/settings/users":              "settings",
   "/settings/privileges":         "settings",
@@ -59,6 +63,51 @@ const PATH_TO_VIEW: Record<string, string> = {
   "/settings/departments":        "settings",
   "/settings/units":              "settings",
 };
+
+/** Workspace departments (SDO, Finance, etc.) — SERVICOM is nested under SDO, not separate */
+const DEPARTMENT_MODULES = new Set([
+  "Finance & Admin Dept",
+  "Standards & Quality Assurance",
+  "Zonal ICT Support",
+  "Programmes",
+  "SDO",
+]);
+
+function DepartmentChildren({ children, allowedTitles, currentView, setView, sidebarOpen, baseDepth }: {
+  children: (ChildModule | SubGroup)[];
+  allowedTitles: Set<string>;
+  currentView: View;
+  setView: (v: View) => void;
+  sidebarOpen: boolean;
+  baseDepth: number;
+}) {
+  const visibleChildren = children.filter(c => {
+    if ("type" in c && c.type === "group") {
+      return c.children.some(leaf => allowedTitles.has(leaf.title));
+    }
+    return allowedTitles.has((c as ChildModule).title);
+  });
+
+  if (visibleChildren.length === 0) return null;
+
+  return (
+    <>
+      {visibleChildren.map((child, i) => {
+        if ("type" in child && child.type === "group") {
+          return (
+            <NavSubGroup key={i} group={child} allowedTitles={allowedTitles}
+              currentView={currentView} setView={setView} sidebarOpen={sidebarOpen} baseDepth={baseDepth} />
+          );
+        }
+        const leaf = child as ChildModule;
+        return (
+          <NavLeaf key={i} title={leaf.title} nodeView={leaf.view}
+            currentView={currentView} setView={setView} depth={baseDepth} sidebarOpen={sidebarOpen} />
+        );
+      })}
+    </>
+  );
+}
 
 // ─── Leaf link ────────────────────────────────────────────────────────────────
 function NavLeaf({ title, nodeView, currentView, setView, depth, sidebarOpen }: {
@@ -87,12 +136,17 @@ function NavLeaf({ title, nodeView, currentView, setView, depth, sidebarOpen }: 
 }
 
 // ─── Sub-group (e.g. "Finance" inside "Finance & Admin Dept") ─────────────────
-function NavSubGroup({ group, allowedTitles, currentView, setView, sidebarOpen }: {
+function NavSubGroup({ group, allowedTitles, currentView, setView, sidebarOpen, baseDepth = 1 }: {
   group: SubGroup; allowedTitles: Set<string>;
   currentView: View; setView: (v: View) => void; sidebarOpen: boolean;
+  baseDepth?: number;
 }) {
   const visibleChildren = group.children.filter(c => allowedTitles.has(c.title));
   if (visibleChildren.length === 0) return null;
+
+  const headerIndent = baseDepth === 0 ? "pl-3" : "pl-7";
+  const childDepth = baseDepth + 1;
+  const guideLeft = baseDepth === 0 ? "left-[22px]" : "left-[36px]";
 
   // Single routable leaf (e.g. only "Monthly Report") — open directly, no extra dropdown
   if (visibleChildren.length === 1 && visibleChildren[0].view) {
@@ -102,7 +156,7 @@ function NavSubGroup({ group, allowedTitles, currentView, setView, sidebarOpen }
         nodeView={visibleChildren[0].view}
         currentView={currentView}
         setView={setView}
-        depth={1}
+        depth={baseDepth}
         sidebarOpen={sidebarOpen}
       />
     );
@@ -116,7 +170,7 @@ function NavSubGroup({ group, allowedTitles, currentView, setView, sidebarOpen }
     <div>
       <button
         onClick={() => sidebarOpen && setOpen((o: boolean) => !o)}
-        className="w-full flex items-center gap-2.5 pl-7 pr-3 py-2 rounded-xl text-left transition-all group text-white/60 hover:bg-white/10 hover:text-white"
+        className={`w-full flex items-center gap-2.5 ${headerIndent} pr-3 py-2 rounded-xl text-left transition-all group text-white/60 hover:bg-white/10 hover:text-white`}
       >
         <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-white/20 group-hover:bg-white/40" />
         {sidebarOpen && (
@@ -130,11 +184,11 @@ function NavSubGroup({ group, allowedTitles, currentView, setView, sidebarOpen }
       </button>
       {sidebarOpen && open && (
         <div className="relative">
-          <div className="absolute top-0 bottom-0 w-px bg-white/10 left-[36px]" />
+          <div className={`absolute top-0 bottom-0 w-px bg-white/10 ${guideLeft}`} />
           <div className="space-y-0.5">
             {visibleChildren.map((child, i) => (
               <NavLeaf key={i} title={child.title} nodeView={child.view}
-                currentView={currentView} setView={setView} depth={2} sidebarOpen={sidebarOpen} />
+                currentView={currentView} setView={setView} depth={childDepth} sidebarOpen={sidebarOpen} />
             ))}
           </div>
         </div>
@@ -193,21 +247,14 @@ function ModuleGroup({ title, children, allowedTitles, currentView, setView, sid
       {sidebarOpen && isOpen && (
         <div className="mt-0.5 space-y-0.5 relative">
           <div className="absolute top-0 bottom-0 w-px bg-white/10 left-[22px]" />
-          <div className="space-y-0.5">
-            {visibleChildren.map((child, i) => {
-              if ("type" in child && child.type === "group") {
-                return (
-                  <NavSubGroup key={i} group={child} allowedTitles={allowedTitles}
-                    currentView={currentView} setView={setView} sidebarOpen={sidebarOpen} />
-                );
-              }
-              const leaf = child as ChildModule;
-              return (
-                <NavLeaf key={i} title={leaf.title} nodeView={leaf.view}
-                  currentView={currentView} setView={setView} depth={1} sidebarOpen={sidebarOpen} />
-              );
-            })}
-          </div>
+          <DepartmentChildren
+            children={children}
+            allowedTitles={allowedTitles}
+            currentView={currentView}
+            setView={setView}
+            sidebarOpen={sidebarOpen}
+            baseDepth={1}
+          />
         </div>
       )}
     </div>
@@ -296,6 +343,16 @@ export default function SidebarNav({ role, access, view, setView, sidebarOpen }:
 
   const showSettings = hasModuleAccess(access, "Settings", role);
 
+  const departmentModules = React.useMemo(
+    () => visibleModules.filter(
+      ({ mod }) => DEPARTMENT_MODULES.has(mod.title) && hasRoutableView(mod),
+    ),
+    [visibleModules],
+  );
+
+  const flattenSingleDepartment = role !== "admin" && departmentModules.length === 1;
+  const flattenedDepartment = flattenSingleDepartment ? departmentModules[0] : null;
+
   return (
     <ScrollArea className="flex-1 px-2 py-2 scrollbar-thin">
       <nav className="space-y-0.5">
@@ -306,6 +363,22 @@ export default function SidebarNav({ role, access, view, setView, sidebarOpen }:
         {visibleModules.map(({ mod, allowedTitles }, i) => {
           if (mod.title === "Notifications" || mod.title === "Settings") return null;
           if (!hasRoutableView(mod)) return null;
+
+          // Single department access — lift SDO/Finance children up; keep sub-groups (e.g. SERVICOM) nested
+          if (flattenedDepartment && mod.title === flattenedDepartment.mod.title) {
+            return (
+              <React.Fragment key={i}>
+                <DepartmentChildren
+                  children={mod.children}
+                  allowedTitles={allowedTitles}
+                  currentView={view}
+                  setView={setView}
+                  sidebarOpen={sidebarOpen}
+                  baseDepth={0}
+                />
+              </React.Fragment>
+            );
+          }
 
           // Single-child modules with a direct view — render as flat leaf
           const flatChildren = mod.children.filter(c => !("type" in c)) as ChildModule[];
