@@ -98,9 +98,13 @@ export const MODULE_CONFIG: ParentModule[] = [
     title: "SDO",
     roles: "all",
     children: [
-      { title: "Stock Verification", view: "stock-verification"       },
-      { title: "My Verifications",   view: "stock-verifications-list" },
+      { title: "Stock Verification", view: "stock-verifications-list" },
       { title: "Asset Register",     view: "stock-assets"             },
+      { type: "group", label: "SERVICOM", children: [
+        { title: "Dashboard",         view: "servicom-dashboard"  },
+        { title: "Monitoring Visits", view: "servicom-visits"     },
+        { title: "Complaints",        view: "servicom-complaints" },
+      ]},
     ],
   },
 

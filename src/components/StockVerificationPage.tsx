@@ -332,7 +332,7 @@ export default function StockVerificationPage({ onBack, verificationId }: StockV
   return (
     <div className="flex flex-col h-full bg-slate-50/30">
       {/* Header */}
-      <div className="bg-white border-b border-border/50 px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+      <div className="bg-white border-b border-border/50 px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
             <ArrowLeft className="w-5 h-5" />
@@ -367,7 +367,7 @@ export default function StockVerificationPage({ onBack, verificationId }: StockV
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-7xl mx-auto p-8 space-y-6">
+        <div className="w-full px-4 md:px-6 py-4 space-y-4">
           {loadingRecord ? (
             <div className="flex items-center justify-center py-24 gap-3 text-slate-400">
               <Loader2 className="w-6 h-6 animate-spin" />

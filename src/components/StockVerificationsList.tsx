@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { stockApi } from "@/lib/api";
+import StockVerificationPage from "./StockVerificationPage";
 
 interface Verification {
   id: number;
@@ -27,8 +28,6 @@ interface Verification {
 
 interface Props {
   onBack: () => void;
-  onNew: () => void;
-  onView: (id: number) => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -51,7 +50,9 @@ function safeDate(v: string | null | undefined) {
   return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export default function StockVerificationsList({ onBack, onNew, onView }: Props) {
+export default function StockVerificationsList({ onBack }: Props) {
+  const [mode, setMode] = React.useState<"list" | "form">("list");
+  const [selectedId, setSelectedId] = React.useState<number | null>(null);
   const [verifications, setVerifications] = React.useState<Verification[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [filterStatus, setFilterStatus] = React.useState("all");
@@ -79,30 +80,43 @@ export default function StockVerificationsList({ onBack, onNew, onView }: Props)
     approved:  verifications.filter(v => v.status === "approved").length,
   }), [verifications]);
 
+  const openNew = () => { setSelectedId(null); setMode("form"); };
+  const openView = (id: number) => { setSelectedId(id); setMode("form"); };
+  const closeForm = () => { setSelectedId(null); setMode("list"); load(); };
+
+  if (mode === "form") {
+    return (
+      <StockVerificationPage
+        verificationId={selectedId}
+        onBack={closeForm}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-slate-50/30">
-      <div className="bg-white border-b border-border/50 px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+      <div className="bg-white border-b border-border/50 px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h2 className="text-xl font-bold tracking-tight">Stock Verifications</h2>
-            <p className="text-xs text-muted-foreground">All stocktaking exercises</p>
+            <h2 className="text-xl font-bold tracking-tight">Stock Verification</h2>
+            <p className="text-xs text-muted-foreground">Stocktaking exercises and asset counts</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2">
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          <Button className="bg-orange-action hover:bg-orange-600 gap-2 shadow-lg shadow-orange-500/20" onClick={onNew}>
+          <Button className="bg-orange-action hover:bg-orange-600 gap-2 shadow-lg shadow-orange-500/20" onClick={openNew}>
             <Plus className="w-4 h-4" /> New Verification
           </Button>
         </div>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="max-w-7xl mx-auto p-8 space-y-6">
+        <div className="w-full px-4 md:px-6 py-4 space-y-4">
 
           {/* Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -123,9 +137,10 @@ export default function StockVerificationsList({ onBack, onNew, onView }: Props)
           {/* Filters */}
           <Card className="rounded-2xl border-[#d4e8dc]">
             <CardContent className="pt-4 pb-4">
-              <div className="flex gap-3 items-center">
+              <div className="flex flex-row items-center gap-3 w-full">
+                <div className="flex-1 min-w-0">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[150px]"
+                  <SelectTrigger className="w-full"
                     displayValue={STATUS_LABELS[filterStatus] ?? "Status"}>
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -136,8 +151,10 @@ export default function StockVerificationsList({ onBack, onNew, onView }: Props)
                     <SelectItem value="approved">Approved</SelectItem>
                   </SelectContent>
                 </Select>
+                </div>
+                <div className="flex-1 min-w-0">
                 <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-[150px]"
+                  <SelectTrigger className="w-full"
                     displayValue={TYPE_LABELS[filterType] ?? "Type"}>
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
@@ -149,8 +166,9 @@ export default function StockVerificationsList({ onBack, onNew, onView }: Props)
                     <SelectItem value="surprise">Surprise</SelectItem>
                   </SelectContent>
                 </Select>
+                </div>
                 {(filterStatus !== "all" || filterType !== "all") && (
-                  <Button variant="ghost" size="sm" className="text-slate-500 gap-1"
+                  <Button variant="ghost" size="sm" className="text-slate-500 gap-1 shrink-0"
                     onClick={() => { setFilterStatus("all"); setFilterType("all"); }}>
                     <XCircle className="w-3.5 h-3.5" /> Clear
                   </Button>
@@ -175,7 +193,7 @@ export default function StockVerificationsList({ onBack, onNew, onView }: Props)
                 <div className="flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
                   <PackageSearch className="w-8 h-8 opacity-30" />
                   <p className="text-sm font-medium">No verifications found</p>
-                  <Button variant="outline" size="sm" onClick={onNew} className="mt-2 gap-2">
+                  <Button variant="outline" size="sm" onClick={openNew} className="mt-2 gap-2">
                     <Plus className="w-4 h-4" /> New Verification
                   </Button>
                 </div>
@@ -222,7 +240,7 @@ export default function StockVerificationsList({ onBack, onNew, onView }: Props)
                           <TableCell className="text-right">
                             <Button variant="ghost" size="sm"
                               className="h-7 w-7 p-0 text-slate-400 hover:text-primary hover:bg-primary/10"
-                              onClick={() => onView(v.id)}>
+                              onClick={() => openView(v.id)}>
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
                           </TableCell>

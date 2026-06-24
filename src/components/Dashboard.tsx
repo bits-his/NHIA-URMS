@@ -30,9 +30,11 @@ import SDOPerformance from "./SDOPerformance";
 import AnnualReportForm from "./AnnualReportForm";
 import AnnualReportsList from "./AnnualReportsList";
 import AnnualReportDetail from "./AnnualReportDetail";
-import StockVerificationPage from "./StockVerificationPage";
 import StockVerificationsList from "./StockVerificationsList";
 import StockAssetManager from "./StockAssetManager";
+import ServicomDashboard from "./servicom/ServicomDashboard";
+import ServicomVisitsPage from "./servicom/ServicomVisitsPage";
+import ServicomComplaintsPage from "./servicom/ServicomComplaintsPage";
 import FinanceMonthlyForm from "./monthly/FinanceMonthlyForm";
 import AdminMonthlyForm from "./monthly/AdminMonthlyForm";
 import ProgrammesMonthlyForm from "./monthly/ProgrammesMonthlyForm";
@@ -54,7 +56,7 @@ import { getMonthlyReportContext } from "@/src/access/monthlyReportAccess";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-coordinator" | "state-coordinator" | "department-officer" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
-type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verification" | "stock-verifications-list" | "stock-assets" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review" | "notifications";
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verifications-list" | "stock-assets" | "servicom-dashboard" | "servicom-visits" | "servicom-complaints" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review" | "notifications";
 interface DashboardProps { role: Role; user?: import("@/src/store/authSlice").AuthUser; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -397,7 +399,6 @@ export default function Dashboard({ role, user, access = [], functionalities = "
   const [view, setView] = React.useState<View>(role === "admin" ? "home" : "home");
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [selectedReportRef, setSelectedReportRef] = React.useState<string | null>(null);
-  const [selectedVerifId, setSelectedVerifId] = React.useState<number | null>(null);
   const userInfo = getUserInfo(role) ?? { name: "User", initials: "U", email: "user@nhia.gov.ng", dept: "NHIA" };
   const monthlyCtx = getMonthlyReportContext(role, user);
 
@@ -780,19 +781,28 @@ export default function Dashboard({ role, user, access = [], functionalities = "
                 referenceId={selectedReportRef!}
                 onBack={() => setView("annual-reports-list")}
               />
-            ) : view === "stock-verification" ? (
-              <StockVerificationPage
-                verificationId={selectedVerifId}
-                onBack={() => { setSelectedVerifId(null); setView("stock-verifications-list"); }}
-              />
             ) : view === "stock-verifications-list" ? (
-              <StockVerificationsList
-                onBack={() => setView("home")}
-                onNew={() => { setSelectedVerifId(null); setView("stock-verification"); }}
-                onView={(id) => { setSelectedVerifId(id); setView("stock-verification"); }}
-              />
+              <StockVerificationsList onBack={() => setView("home")} />
             ) : view === "stock-assets" ? (
               <StockAssetManager onBack={() => setView("home")} />
+            ) : view === "servicom-dashboard" ? (
+              <ServicomDashboard
+                onBack={() => setView("home")}
+                defaultStateId={monthlyCtx.defaultStateId}
+                defaultZoneId={monthlyCtx.defaultZoneId}
+              />
+            ) : view === "servicom-visits" ? (
+              <ServicomVisitsPage
+                onBack={() => setView("home")}
+                defaultStateId={monthlyCtx.defaultStateId}
+                defaultZoneId={monthlyCtx.defaultZoneId}
+              />
+            ) : view === "servicom-complaints" ? (
+              <ServicomComplaintsPage
+                onBack={() => setView("home")}
+                defaultStateId={monthlyCtx.defaultStateId}
+                defaultZoneId={monthlyCtx.defaultZoneId}
+              />
             ) : view === "finance-monthly" ? (
               <DeptMonthlyPage dept="finance" title="Finance Monthly Reports" section="finance"
                 onBack={() => setView("home")} defaultZoneId={monthlyCtx.defaultZoneId} defaultStateId={monthlyCtx.defaultStateId}
@@ -828,6 +838,7 @@ export default function Dashboard({ role, user, access = [], functionalities = "
                 onBack={() => setView("home")}
                 onNew={(dept) => setView(`${dept === "finance" ? "finance" : dept === "sqa" ? "sqa" : "programmes"}-monthly` as View)}
                 defaultStateId={monthlyCtx.defaultStateId}
+                defaultZoneId={monthlyCtx.defaultZoneId}
               />
             ) : view === "settings" ? (
               <AdminSettingsPage />

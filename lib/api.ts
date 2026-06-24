@@ -289,3 +289,80 @@ export const monthlyApi = {
   programmes: makeDeptApi("programmes"),
   sqa:        makeDeptApi("sqa"),
 };
+
+// ─── SERVICOM M&E ─────────────────────────────────────────────────────────────
+
+const servicomFilters = (filters?: Record<string, string | undefined>) => {
+  const p = new URLSearchParams(
+    Object.entries(filters || {}).filter(([, v]) => !!v) as [string, string][],
+  ).toString();
+  return p ? `?${p}` : "";
+};
+
+export const servicomApi = {
+  getIndicators: () =>
+    request<{ success: boolean; data: any[] }>("/servicom/indicators"),
+
+  getDashboard: (filters?: { state_id?: string; zone_id?: string; from?: string; to?: string }) =>
+    request<{ success: boolean; data: any }>(`/servicom/dashboard${servicomFilters(filters)}`),
+
+  listFacilities: (filters?: { state_id?: string; zone_id?: string }) =>
+    request<{ success: boolean; data: any[] }>(`/servicom/facilities${servicomFilters(filters)}`),
+
+  listVisits: (filters?: Record<string, string | undefined>) =>
+    request<{ success: boolean; data: any[] }>(`/servicom/visits${servicomFilters(filters)}`),
+
+  getVisit: (id: number | string) =>
+    request<{ success: boolean; data: any }>(`/servicom/visits/${id}`),
+
+  createVisit: (payload: any) =>
+    request<{ success: boolean; data: any }>("/servicom/visits", {
+      method: "POST", body: JSON.stringify(payload),
+    }),
+
+  updateVisit: (id: number | string, payload: any) =>
+    request<{ success: boolean; data: any }>(`/servicom/visits/${id}`, {
+      method: "PUT", body: JSON.stringify(payload),
+    }),
+
+  submitVisit: (id: number | string) =>
+    request<{ success: boolean; data: any }>(`/servicom/visits/${id}/submit`, { method: "PATCH" }),
+
+  approveVisit: (id: number | string) =>
+    request<{ success: boolean; data: any }>(`/servicom/visits/${id}/approve`, { method: "PATCH" }),
+
+  returnVisit: (id: number | string, reason: string) =>
+    request<{ success: boolean; data: any }>(`/servicom/visits/${id}/return`, {
+      method: "PATCH", body: JSON.stringify({ reason }),
+    }),
+
+  uploadEvidence: (visitId: number | string, file: File, description?: string) => {
+    const token = tokenStore.get();
+    const form = new FormData();
+    form.append("file", file);
+    if (description) form.append("description", description);
+    return fetch(`${BASE_URL}/servicom/visits/${visitId}/evidence`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    }).then(async (res) => {
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Upload failed");
+      return json as { success: boolean; data: any };
+    });
+  },
+
+  listComplaints: (filters?: Record<string, string | undefined>) =>
+    request<{ success: boolean; data: any[] }>(`/servicom/complaints${servicomFilters(filters)}`),
+
+  createComplaint: (payload: any) =>
+    request<{ success: boolean; data: any }>("/servicom/complaints", {
+      method: "POST", body: JSON.stringify(payload),
+    }),
+
+  updateComplaint: (id: number | string, payload: any) =>
+    request<{ success: boolean; data: any }>(`/servicom/complaints/${id}`, {
+      method: "PUT", body: JSON.stringify(payload),
+    }),
+};
+

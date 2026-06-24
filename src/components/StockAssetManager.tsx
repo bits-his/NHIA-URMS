@@ -392,8 +392,8 @@ export default function StockAssetManager({ onBack }: Props) {
             <>
               <Card className="rounded-2xl border-[#d4e8dc]">
                 <CardContent className="pt-5 pb-4">
-                  <div className="flex gap-4 items-end">
-                    <div className="space-y-2 w-48">
+                  <div className="flex flex-row items-end gap-3 w-full">
+                    <div className="flex-1 min-w-0 space-y-2">
                       <Label className="text-xs">Zone</Label>
                       <Select value={filterZone} onValueChange={setFilterZone}>
                         <SelectTrigger className="w-full"
@@ -406,7 +406,7 @@ export default function StockAssetManager({ onBack }: Props) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2 w-48">
+                    <div className="flex-1 min-w-0 space-y-2">
                       <Label className="text-xs">State</Label>
                       <Select value={filterState} onValueChange={setFilterState}>
                         <SelectTrigger className="w-full"
@@ -419,7 +419,7 @@ export default function StockAssetManager({ onBack }: Props) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2 w-48">
+                    <div className="flex-1 min-w-0 space-y-2">
                       <Label className="text-xs">Status</Label>
                       <Select value={filterStatus} onValueChange={setFilterStatus}>
                         <SelectTrigger className="w-full"

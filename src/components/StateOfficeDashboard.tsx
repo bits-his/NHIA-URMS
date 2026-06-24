@@ -51,13 +51,13 @@ const DEPT_VIEW_MAP: Record<string, string> = {
   FIN:  "finance-monthly",
   HR:   "admin-monthly",
   HI:   "sqa-monthly",
-  SVC:  "complaints-monthly",
+  SVC:  "servicom-dashboard",
   COM:  "outreach-monthly",
   SPD:  "programmes-monthly",
   ICT:  "sqa-monthly",
   AUD:  "sqa-monthly",
   PLN:  "programmes-monthly",
-  STK:  "stock-verification",
+  STK:  "stock-verifications-list",
   LEG:  "finance-monthly",
 };
 

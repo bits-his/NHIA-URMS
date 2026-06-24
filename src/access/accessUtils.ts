@@ -27,6 +27,7 @@ export function canAccessModule(mod: ParentModule, user: AccessUser): boolean {
 /** Map retired privilege labels to current module titles */
 export function normalizeFunctionalityTitle(title: string): string {
   if (title === "My Submissions" || title === "New Annual Report") return "Annual Report";
+  if (title === "SERVICOM Dashboard") return "Dashboard";
   return title;
 }
 

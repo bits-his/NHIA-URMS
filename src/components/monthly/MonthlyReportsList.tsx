@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ArrowLeft, Plus, RefreshCw, Eye, Loader2, FileText, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Loader2, FileText, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,13 @@ import { toast } from "sonner";
 import { monthlyApi, type MonthlyDept } from "@/lib/api";
 import { MONTHS } from "./MonthlyFormShell";
 import { buildReportingYearOptions } from "./reportingYears";
+import {
+  columnAppliesToRecord,
+  formatMonthlyCellValue,
+  getColumnsForDept,
+  type MonthlyListColumn,
+} from "./monthlyListColumns";
+import { ALL_STATES, useMonthlyStateFilter } from "./useMonthlyStateFilter";
 
 const DEPT_OPTIONS: { value: MonthlyDept; label: string }[] = [
   { value: "finance",    label: "Finance" },
@@ -34,15 +41,25 @@ interface Props {
   onBack: () => void;
   onNew: (dept: MonthlyDept) => void;
   defaultStateId?: string | null;
+  defaultZoneId?: string | null;
 }
 
-export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Props) {
+export default function MonthlyReportsList({ onBack, onNew, defaultStateId, defaultZoneId }: Props) {
   const [dept,         setDept]         = React.useState<MonthlyDept>("finance");
   const [filterYear,   setFilterYear]   = React.useState(String(new Date().getFullYear()));
   const [filterMonth,  setFilterMonth]  = React.useState("all");
   const [filterStatus, setFilterStatus] = React.useState("all");
   const [records,      setRecords]      = React.useState<any[]>([]);
   const [loading,      setLoading]      = React.useState(true);
+
+  const {
+    showStateFilter,
+    states,
+    filterState,
+    setFilterState,
+    apiStateId,
+    stateFilterActive,
+  } = useMonthlyStateFilter(defaultStateId, defaultZoneId);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -51,17 +68,15 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
         year:     filterYear   !== "all" ? filterYear   : undefined,
         month:    filterMonth  !== "all" ? filterMonth  : undefined,
         status:   filterStatus !== "all" ? filterStatus : undefined,
-        state_id: defaultStateId ?? undefined,
+        state_id: apiStateId,
       });
       setRecords(res.data);
     } catch (err: any) {
       toast.error("Failed to load", { description: err.message });
     } finally { setLoading(false); }
-  }, [dept, filterYear, filterMonth, filterStatus, defaultStateId]);
+  }, [dept, filterYear, filterMonth, filterStatus, apiStateId]);
 
   React.useEffect(() => { load(); }, [load]);
-
-  const monthLabel = (m: number) => MONTHS.find(x => x.v === String(m))?.l ?? String(m);
 
   // Summary counts
   const counts = React.useMemo(() => ({
@@ -74,6 +89,11 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
   const yearOptions = React.useMemo(
     () => buildReportingYearOptions(records.map(r => r.reporting_year)),
     [records],
+  );
+
+  const dataColumns = React.useMemo(
+    () => getColumnsForDept(dept),
+    [dept],
   );
 
   return (
@@ -121,9 +141,10 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
           {/* Filters */}
           <Card className="rounded-2xl border-[#d4e8dc]">
             <CardContent className="pt-4 pb-4">
-              <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex flex-row items-center gap-3 w-full">
+                <div className="flex-1 min-w-0">
                 <Select value={dept} onValueChange={v => setDept(v as MonthlyDept)}>
-                  <SelectTrigger className="w-[160px]"
+                  <SelectTrigger className="w-full"
                     displayValue={DEPT_OPTIONS.find(d => d.value === dept)?.label ?? dept}>
                     <SelectValue placeholder="Department" />
                   </SelectTrigger>
@@ -131,8 +152,28 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                     {DEPT_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                </div>
+                {showStateFilter && (
+                  <div className="flex-1 min-w-0">
+                  <Select value={filterState} onValueChange={setFilterState}>
+                    <SelectTrigger className="w-full"
+                      displayValue={filterState === ALL_STATES
+                        ? "All States"
+                        : (states.find(s => String(s.id) === filterState)?.description ?? filterState)}>
+                      <SelectValue placeholder="All States" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_STATES}>All States</SelectItem>
+                      {states.map(s => (
+                        <SelectItem key={s.id} value={String(s.id)}>{s.description}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
                 <Select value={filterYear} onValueChange={setFilterYear}>
-                  <SelectTrigger className="w-[120px]"
+                  <SelectTrigger className="w-full"
                     displayValue={filterYear === "all" ? "All Years" : filterYear}>
                     <SelectValue placeholder="All Years" />
                   </SelectTrigger>
@@ -141,8 +182,10 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                     {yearOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                </div>
+                <div className="flex-1 min-w-0">
                 <Select value={filterMonth} onValueChange={setFilterMonth}>
-                  <SelectTrigger className="w-[140px]"
+                  <SelectTrigger className="w-full"
                     displayValue={filterMonth === "all" ? "All Months" : (MONTHS.find(m => m.v === filterMonth)?.l ?? filterMonth)}>
                     <SelectValue placeholder="All Months" />
                   </SelectTrigger>
@@ -151,8 +194,10 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                     {MONTHS.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                </div>
+                <div className="flex-1 min-w-0">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[140px]"
+                  <SelectTrigger className="w-full"
                     displayValue={filterStatus === "all" ? "All Statuses" : filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)}>
                     <SelectValue placeholder="All Statuses" />
                   </SelectTrigger>
@@ -163,9 +208,14 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                     <SelectItem value="approved">Approved</SelectItem>
                   </SelectContent>
                 </Select>
-                {(filterMonth !== "all" || filterStatus !== "all") && (
-                  <Button variant="ghost" size="sm" className="text-slate-500 gap-1"
-                    onClick={() => { setFilterMonth("all"); setFilterStatus("all"); }}>
+                </div>
+                {(filterMonth !== "all" || filterStatus !== "all" || stateFilterActive) && (
+                  <Button variant="ghost" size="sm" className="text-slate-500 gap-1 shrink-0"
+                    onClick={() => {
+                      setFilterMonth("all");
+                      setFilterStatus("all");
+                      if (showStateFilter) setFilterState(ALL_STATES);
+                    }}>
                     <XCircle className="w-3.5 h-3.5" /> Clear
                   </Button>
                 )}
@@ -194,16 +244,20 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                   </Button>
                 </div>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-[#f0fdf7] hover:bg-[#f0fdf7]">
-                      <TableHead className="text-xs font-bold text-slate-600">Reference</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">State</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Year</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Month</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Submitted By</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Date</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Status</TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Reference</TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Section</TableHead>
+                      {dataColumns.map((col: MonthlyListColumn) => (
+                        <TableHead key={col.key} className="text-xs font-bold text-slate-600 text-right whitespace-nowrap">
+                          {col.label}
+                        </TableHead>
+                      ))}
+                      <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Submitted By</TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Date</TableHead>
+                      <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -214,11 +268,16 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                           transition={{ delay: i * 0.02 }}
                           className="hover:bg-[#f8fdfb] transition-colors border-b border-slate-100 last:border-0">
                           <TableCell><span className="font-mono text-xs font-bold text-primary">{r.reference_id}</span></TableCell>
-                          <TableCell className="text-sm font-semibold text-slate-800">{r.state?.description ?? `State ${r.state_id}`}</TableCell>
-                          <TableCell className="text-sm text-slate-600">{r.reporting_year}</TableCell>
-                          <TableCell className="text-sm text-slate-600">{monthLabel(r.reporting_month)}</TableCell>
-                          <TableCell className="text-sm text-slate-500">{r.submitted_by ?? "—"}</TableCell>
-                          <TableCell className="text-xs text-slate-400">{safeDate(r.createdAt)}</TableCell>
+                          <TableCell className="text-xs text-slate-500 capitalize whitespace-nowrap">{r.section ?? "—"}</TableCell>
+                          {dataColumns.map((col: MonthlyListColumn) => (
+                            <TableCell key={col.key} className="text-xs font-semibold text-slate-700 text-right whitespace-nowrap tabular-nums">
+                              {columnAppliesToRecord(col, r)
+                                ? formatMonthlyCellValue(r[col.key], col.format)
+                                : "—"}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-sm text-slate-500 whitespace-nowrap">{r.submitted_by ?? "—"}</TableCell>
+                          <TableCell className="text-xs text-slate-400 whitespace-nowrap">{safeDate(r.createdAt)}</TableCell>
                           <TableCell>
                             <Badge className={`text-[10px] px-2 py-0.5 flex items-center gap-1 w-fit border ${sc.cls}`}>
                               {sc.icon} {sc.label}
@@ -229,6 +288,7 @@ export default function MonthlyReportsList({ onBack, onNew, defaultStateId }: Pr
                     })}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>
