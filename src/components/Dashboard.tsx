@@ -60,7 +60,7 @@ import { getMonthlyReportContext } from "@/src/access/monthlyReportAccess";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-coordinator" | "state-coordinator" | "department-officer" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
-type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verifications-list" | "stock-assets" | "servicom-dashboard" | "servicom-visits" | "servicom-complaints" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review" | "notifications" | "state-enrolment" | "state-migration" | "state-cemonc" | "state-complaints" | "state-compliance-monitoring" | "state-reconciliation" | "state-accreditation" | "state-stakeholder" | "state-hmo-selection" | "state-challenges";
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verifications-list" | "stock-assets" | "servicom-dashboard" | "servicom-visits" | "servicom-complaints" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review" | "notifications" | "state-enrolment" | "state-migration" | "state-cemonc" | "state-complaints" | "state-compliance-monitoring" | "state-reconciliation" | "state-accreditation" | "state-stakeholder" | "state-hmo-selection" | "state-challenges" | "state-igr" | "state-sshia-financial" | "state-expenditure-profile";
 interface DashboardProps { role: Role; user?: import("@/src/store/authSlice").AuthUser; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -882,6 +882,18 @@ export default function Dashboard({ role, user, access = [], functionalities = "
                 defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
             ) : view === "state-challenges" ? (
               <StateOfficeReportsList key="state-challenges" reportType="challenges" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-igr" ? (
+              <StateOfficeReportsList reportType="igr" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-sshia-financial" ? (
+              <StateOfficeReportsList reportType="sshia-financial" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-expenditure-profile" ? (
+              <StateOfficeReportsList reportType="expenditure-profile" onBack={() => setView("home")}
                 defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
                 defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
             ) : view === "settings" ? (

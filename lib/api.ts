@@ -370,7 +370,8 @@ export const servicomApi = {
 
 export type StateOfficeReportType =
   | "enrolment" | "migration" | "cemonc"
-  | "complaints" | "accreditation" | "stakeholder" | "hmo-selection" | "challenges";
+  | "complaints" | "accreditation" | "stakeholder" | "hmo-selection" | "challenges"
+  | "igr" | "sshia-financial" | "expenditure-profile";
 
 const makeStateOfficeApi = (type: StateOfficeReportType) => ({
   list: (filters?: { state_id?: string; zone_id?: string; year?: string; month?: string; status?: string }) => {
@@ -404,6 +405,9 @@ export const stateOfficeApi = {
   stakeholder: makeStateOfficeApi("stakeholder"),
   "hmo-selection": makeStateOfficeApi("hmo-selection"),
   challenges: makeStateOfficeApi("challenges"),
+  igr: makeStateOfficeApi("igr"),
+  "sshia-financial": makeStateOfficeApi("sshia-financial"),
+  "expenditure-profile": makeStateOfficeApi("expenditure-profile"),
 };
 
 const stateOfficeFilters = (filters?: Record<string, string | undefined>) => {
