@@ -203,7 +203,7 @@ export const REPORT_CONFIG: Record<StateOfficeReportType, {
   },
   igr: {
     title: "IGR",
-    subtitle: "Section E — Internally Generated Revenue",
+    subtitle: "Internally Generated Revenue",
     refLabel: "Service Type",
     countLabel: "Amount (₦)",
     totalLabel: "Total IGR (₦)",
@@ -217,7 +217,7 @@ export const REPORT_CONFIG: Record<StateOfficeReportType, {
   },
   "expenditure-profile": {
     title: "Expenditure Profile",
-    subtitle: "Expenditure Profile Template — Budget Allocation",
+    subtitle: "Expenditure Profile — Budget Allocation",
     refLabel: "Sub-head",
     countLabel: "Amount (₦)",
     totalLabel: "Total Allocated (₦)",
