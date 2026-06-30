@@ -10,6 +10,7 @@ export const ALL_MODULES = [
   { key: "Zonal ICT Support",            label: "Zonal ICT Support"                },
   { key: "Programmes",                   label: "Programmes"                       },
   { key: "SDO",                          label: "SDO"                              },
+  { key: "State Offices",                label: "State Offices"                    },
   { key: "Notifications",                label: "Notifications"                    },
   { key: "Settings",                     label: "Settings"                         },
 ];

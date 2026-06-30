@@ -14,6 +14,12 @@ import { toast } from "sonner";
 import { stateOfficeApi } from "@/lib/api";
 import StateOfficeReportPage from "./StateOfficeReportPage";
 import StateOfficeReportDetail from "./StateOfficeReportDetail";
+import IgrReportPage from "./IgrReportPage";
+import IgrReportDetail from "./IgrReportDetail";
+import SshiaFinancialReportPage from "./SshiaFinancialReportPage";
+import SshiaFinancialReportDetail from "./SshiaFinancialReportDetail";
+import ExpenditureProfileReportPage from "./ExpenditureProfileReportPage";
+import ExpenditureProfileReportDetail from "./ExpenditureProfileReportDetail";
 import { REPORT_CONFIG, type StateOfficeReportType } from "./constants";
 
 interface Report {
@@ -84,6 +90,33 @@ export default function StateOfficeReportsList({
   }), [reports]);
 
   if (mode === "view" && selectedId) {
+    if (reportType === "igr") {
+      return (
+        <IgrReportDetail
+          reportId={selectedId}
+          onBack={() => { setSelectedId(null); setMode("list"); }}
+          onEdit={() => setMode("edit")}
+        />
+      );
+    }
+    if (reportType === "sshia-financial") {
+      return (
+        <SshiaFinancialReportDetail
+          reportId={selectedId}
+          onBack={() => { setSelectedId(null); setMode("list"); }}
+          onEdit={() => setMode("edit")}
+        />
+      );
+    }
+    if (reportType === "expenditure-profile") {
+      return (
+        <ExpenditureProfileReportDetail
+          reportId={selectedId}
+          onBack={() => { setSelectedId(null); setMode("list"); }}
+          onEdit={() => setMode("edit")}
+        />
+      );
+    }
     return (
       <StateOfficeReportDetail
         reportType={reportType}
@@ -95,6 +128,36 @@ export default function StateOfficeReportsList({
   }
 
   if (mode === "create" || mode === "edit") {
+    if (reportType === "igr") {
+      return (
+        <IgrReportPage
+          reportId={mode === "edit" ? selectedId : null}
+          onBack={() => { setSelectedId(null); setMode("list"); load(); }}
+          defaultZoneId={defaultZoneId}
+          defaultStateId={defaultStateId}
+        />
+      );
+    }
+    if (reportType === "sshia-financial") {
+      return (
+        <SshiaFinancialReportPage
+          reportId={mode === "edit" ? selectedId : null}
+          onBack={() => { setSelectedId(null); setMode("list"); load(); }}
+          defaultZoneId={defaultZoneId}
+          defaultStateId={defaultStateId}
+        />
+      );
+    }
+    if (reportType === "expenditure-profile") {
+      return (
+        <ExpenditureProfileReportPage
+          reportId={mode === "edit" ? selectedId : null}
+          onBack={() => { setSelectedId(null); setMode("list"); load(); }}
+          defaultZoneId={defaultZoneId}
+          defaultStateId={defaultStateId}
+        />
+      );
+    }
     return (
       <StateOfficeReportPage
         reportType={reportType}

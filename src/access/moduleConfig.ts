@@ -122,6 +122,15 @@ export const MODULE_CONFIG: ParentModule[] = [
       { type: "group", label: "CEmONC & FFP", children: [
         { title: "CEmONC & FFP Beneficiaries", view: "state-cemonc" },
       ]},
+      { type: "group", label: "IGR", children: [
+        { title: "IGR", view: "state-igr" },
+      ]},
+      { type: "group", label: "SSHIA Financial Report", children: [
+        { title: "SSHIA Financial Report", view: "state-sshia-financial" },
+      ]},
+      { type: "group", label: "Expenditure Profile", children: [
+        { title: "Expenditure Profile", view: "state-expenditure-profile" },
+      ]},
     ],
   },
 

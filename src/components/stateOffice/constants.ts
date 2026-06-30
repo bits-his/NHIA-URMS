@@ -1,4 +1,4 @@
-export type StateOfficeReportType = "enrolment" | "migration" | "cemonc";
+export type StateOfficeReportType = "enrolment" | "migration" | "cemonc" | "igr" | "sshia-financial" | "expenditure-profile";
 
 export const MONTHS = [
   { value: 1, label: "January" },   { value: 2, label: "February" },
@@ -30,6 +30,38 @@ export const CEMONC_INTERVENTIONS = [
   { value: "ffp",    label: "FFP" },
 ];
 
+export const IGR_SERVICE_TYPES = [
+  { value: "enrollee_update",    label: "Enrollee Update" },
+  { value: "application",       label: "Application" },
+  { value: "accreditation",     label: "Accreditation" },
+  { value: "change_of_provider", label: "Change of Provider" },
+  { value: "reaccreditation",   label: "Reaccreditation" },
+  { value: "extra_dependant",   label: "Extra Dependant" },
+  { value: "gifship",           label: "GIFSHIP" },
+  { value: "ops",               label: "OPS" },
+];
+
+export const SSHIA_SUB_HEADS = [
+  { value: "capitation",      label: "Capitation" },
+  { value: "fee_for_service", label: "Fee-For-Service" },
+  { value: "reserve_funds",   label: "Reserve Funds" },
+  { value: "admin_charge",    label: "Admin. Charge" },
+  { value: "operations",      label: "Operations" },
+];
+
+export const EXPENDITURE_SUB_HEADS = [
+  { value: "fuel_lub",               label: "FUEL & LUB" },
+  { value: "newspapers_periodicals", label: "NEWSPAPERS & PERIODICALS" },
+  { value: "ent_hosp",               label: "ENT & HOSP." },
+  { value: "tel_postages",           label: "TEL & POSTAGES" },
+  { value: "printing_stationery",    label: "PRINTING & STATIONERY" },
+  { value: "transport_travel",       label: "TRANSPORT & TRAVEL" },
+  { value: "maint_veh",              label: "MAINT. OF VEH" },
+  { value: "maint_equip",            label: "MAINT. OF EQUIP" },
+  { value: "utilities",              label: "UTILITIES" },
+  { value: "bank_charges",           label: "BANK CHARGES" },
+];
+
 export const REPORT_CONFIG: Record<StateOfficeReportType, {
   title: string;
   subtitle: string;
@@ -58,6 +90,27 @@ export const REPORT_CONFIG: Record<StateOfficeReportType, {
     countLabel: "Number of Beneficiaries",
     totalLabel: "Total Beneficiaries",
   },
+  igr: {
+    title: "IGR",
+    subtitle: "Section E — Internally Generated Revenue",
+    refLabel: "Service Type",
+    countLabel: "Amount (₦)",
+    totalLabel: "Total IGR (₦)",
+  },
+  "sshia-financial": {
+    title: "SSHIA Financial Report",
+    subtitle: "FORM 07 — Financial Management Report (Quarterly)",
+    refLabel: "Sub-head",
+    countLabel: "Balance (₦)",
+    totalLabel: "Total Balance (₦)",
+  },
+  "expenditure-profile": {
+    title: "Expenditure Profile",
+    subtitle: "Expenditure Profile Template — Budget Allocation",
+    refLabel: "Sub-head",
+    countLabel: "Amount (₦)",
+    totalLabel: "Total Allocated (₦)",
+  },
 };
 
 export function monthLabel(month: number | string) {
@@ -79,6 +132,29 @@ export function labelOf(
 
 export function formatCount(value: number | string | null | undefined) {
   return (Number(value) || 0).toLocaleString();
+}
+
+export function formatAmount(value: number | string | null | undefined) {
+  return (Number(value) || 0).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Money display with Naira sign */
+export function formatNaira(value: number | string | null | undefined) {
+  return `₦${formatAmount(value)}`;
+}
+
+export function calcSshiaLine(opening: number, receipts: number, expenditure: number) {
+  const A = Number(opening) || 0;
+  const B = Number(receipts) || 0;
+  const D = Number(expenditure) || 0;
+  const C = A + B;
+  const E = C - D;
+  const F = D !== 0 ? (C / D) * 100 : 0;
+  return { opening_balance: A, receipts: B, total_budget: C, actual_expenditure: D, balance: E, variance_pct: F };
+}
+
+export function calcExpenditurePct(amount: number, total: number) {
+  return total !== 0 ? (Number(amount) / total) * 100 : 0;
 }
 
 export function formatDate(value: string | null | undefined) {

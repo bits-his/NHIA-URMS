@@ -368,7 +368,7 @@ export const servicomApi = {
 
 // ─── State Office Unified Monthly Reports ─────────────────────────────────────
 
-export type StateOfficeReportType = "enrolment" | "migration" | "cemonc";
+export type StateOfficeReportType = "enrolment" | "migration" | "cemonc" | "igr" | "sshia-financial" | "expenditure-profile";
 
 const makeStateOfficeApi = (type: StateOfficeReportType) => ({
   list: (filters?: { state_id?: string; zone_id?: string; year?: string; month?: string; status?: string }) => {
@@ -397,5 +397,8 @@ export const stateOfficeApi = {
   enrolment: makeStateOfficeApi("enrolment"),
   migration: makeStateOfficeApi("migration"),
   cemonc:    makeStateOfficeApi("cemonc"),
+  igr:       makeStateOfficeApi("igr"),
+  "sshia-financial": makeStateOfficeApi("sshia-financial"),
+  "expenditure-profile": makeStateOfficeApi("expenditure-profile"),
 };
 

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AccessEntry } from "@/src/access/types";
-import { MODULE_CONFIG, type ChildModule, type SubGroup, hasRoutableView } from "@/src/access/moduleConfig";
+import { MODULE_CONFIG, type ChildModule, type SubGroup, hasRoutableView, flatLeaves } from "@/src/access/moduleConfig";
 import { hasModuleAccess } from "@/src/access/roles";
 import { normalizeAllowedTitles } from "@/src/access/accessUtils";
 
@@ -309,6 +309,10 @@ function SettingsLeaf({ view, setView, sidebarOpen }: {
 export default function SidebarNav({ role, access, view, setView, sidebarOpen }: SidebarNavProps) {
   const [openModule, setOpenModule] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (String(view).startsWith("state-")) setOpenModule("State Offices");
+  }, [view]);
+
   const toggle = (title: string) =>
     setOpenModule((prev: string | null) => prev === title ? null : title);
 
@@ -333,10 +337,11 @@ export default function SidebarNav({ role, access, view, setView, sidebarOpen }:
       .map(entry => {
         const mod = MODULE_CONFIG.find(m => m.title === entry.access_to);
         if (!mod) return null;
-        return {
-          mod,
-          allowedTitles: normalizeAllowedTitles(entry.functionalities),
-        };
+        // State Offices: always show all configured sections (Enrolment, Migration, CEmONC, IGR)
+        const allowedTitles = mod.title === "State Offices"
+          ? new Set(flatLeaves(mod))
+          : normalizeAllowedTitles(entry.functionalities);
+        return { mod, allowedTitles };
       })
       .filter(Boolean) as { mod: typeof MODULE_CONFIG[0]; allowedTitles: Set<string> }[];
   }, [role, access]);
