@@ -108,6 +108,23 @@ export const MODULE_CONFIG: ParentModule[] = [
     ],
   },
 
+  // ── State Offices (Unified Monthly Report) ───────────────────────────────────
+  {
+    title: "State Offices",
+    roles: "all",
+    children: [
+      { type: "group", label: "Enrolment", children: [
+        { title: "Enrolment", view: "state-enrolment" },
+      ]},
+      { type: "group", label: "Migration", children: [
+        { title: "Migration / Update Requests", view: "state-migration" },
+      ]},
+      { type: "group", label: "CEmONC & FFP", children: [
+        { title: "CEmONC & FFP Beneficiaries", view: "state-cemonc" },
+      ]},
+    ],
+  },
+
   // ── Notifications ──────────────────────────────────────────────────────────
   {
     title: "Notifications",

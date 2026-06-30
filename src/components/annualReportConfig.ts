@@ -143,7 +143,7 @@ export function buildSections(year: number, reportType: ReportTypeId, showZone: 
     },
     {
       id: "cemonc",
-      title: "CEmONC",
+      title: "CEmONC & FFP",
       columns: [
         { key: "cemonc_hcf", label: "ACCREDITED HCF", kind: "num", get: (r) => r.cemonc_accredited_hcf },
         { key: "cemonc_ben", label: "BENEFICIARIES", kind: "num", get: (r) => r.cemonc_beneficiaries },

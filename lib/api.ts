@@ -366,3 +366,36 @@ export const servicomApi = {
     }),
 };
 
+// ─── State Office Unified Monthly Reports ─────────────────────────────────────
+
+export type StateOfficeReportType = "enrolment" | "migration" | "cemonc";
+
+const makeStateOfficeApi = (type: StateOfficeReportType) => ({
+  list: (filters?: { state_id?: string; zone_id?: string; year?: string; month?: string; status?: string }) => {
+    const p = new URLSearchParams(Object.entries(filters || {}).filter(([, v]) => !!v) as [string, string][]).toString();
+    return request<{ success: boolean; data: any[] }>(
+      `/state-office/${type}/reports${p ? `?${p}` : ""}`
+    );
+  },
+  get: (id: number | string) =>
+    request<{ success: boolean; data: any }>(`/state-office/${type}/reports/${id}`),
+  create: (payload: any) =>
+    request<{ success: boolean; data: any }>(`/state-office/${type}/reports`, {
+      method: "POST", body: JSON.stringify(payload),
+    }),
+  update: (id: number | string, payload: any) =>
+    request<{ success: boolean; data: any }>(`/state-office/${type}/reports/${id}`, {
+      method: "PUT", body: JSON.stringify(payload),
+    }),
+  updateStatus: (id: number | string, status: string) =>
+    request<{ success: boolean; data: any }>(`/state-office/${type}/reports/${id}/status`, {
+      method: "PATCH", body: JSON.stringify({ status }),
+    }),
+});
+
+export const stateOfficeApi = {
+  enrolment: makeStateOfficeApi("enrolment"),
+  migration: makeStateOfficeApi("migration"),
+  cemonc:    makeStateOfficeApi("cemonc"),
+};
+
