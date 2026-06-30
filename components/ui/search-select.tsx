@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Search, ChevronDown, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SearchSelectOption {
   value: string;
   label: string;
-  sub?: string; // optional subtitle / code
+  sub?: string;
 }
 
 interface SearchSelectProps {
@@ -19,8 +20,8 @@ interface SearchSelectProps {
   disabled?: boolean;
   className?: string;
   id?: string;
-  /** If true, shows a clear (×) button when a value is selected */
   clearable?: boolean;
+  onSearchChange?: (query: string) => void;
 }
 
 export function SearchSelect({
@@ -33,11 +34,14 @@ export function SearchSelect({
   className,
   id,
   clearable = false,
+  onSearchChange,
 }: SearchSelectProps) {
-  const [open, setOpen]       = React.useState(false);
-  const [query, setQuery]     = React.useState("");
-  const containerRef          = React.useRef<HTMLDivElement>(null);
-  const searchRef             = React.useRef<HTMLInputElement>(null);
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties>({});
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
 
   const selected = options.find(o => o.value === value);
 
@@ -49,22 +53,44 @@ export function SearchSelect({
     );
   }, [options, query]);
 
-  // Close on outside click
+  const updateMenuPosition = React.useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const maxWidth = Math.min(Math.max(rect.width, 320), window.innerWidth - 16);
+    setMenuStyle({
+      position: "fixed",
+      top: rect.bottom + 6,
+      left: Math.min(rect.left, window.innerWidth - maxWidth - 8),
+      width: maxWidth,
+      zIndex: 9999,
+    });
+  }, []);
+
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
+      setQuery("");
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Focus search when opened
   React.useEffect(() => {
-    if (open) setTimeout(() => searchRef.current?.focus(), 50);
-  }, [open]);
+    if (!open) return;
+    updateMenuPosition();
+    const onReflow = () => updateMenuPosition();
+    window.addEventListener("resize", onReflow);
+    window.addEventListener("scroll", onReflow, true);
+    const t = setTimeout(() => searchRef.current?.focus(), 50);
+    return () => {
+      window.removeEventListener("resize", onReflow);
+      window.removeEventListener("scroll", onReflow, true);
+      clearTimeout(t);
+    };
+  }, [open, updateMenuPosition]);
 
   const handleSelect = (val: string) => {
     onChange(val);
@@ -78,9 +104,89 @@ export function SearchSelect({
     setQuery("");
   };
 
+  const dropdown = open ? (
+    <div
+      ref={menuRef}
+      style={menuStyle}
+      className={cn(
+        "bg-white rounded-2xl border border-[#d4e8dc]",
+        "shadow-[0_12px_40px_rgba(20,92,63,0.18),0_4px_12px_rgba(20,92,63,0.1)]",
+        "overflow-hidden",
+      )}
+    >
+      <div className="p-2 border-b border-[#e8f5ee]">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5a7a6a]" />
+          <input
+            ref={searchRef}
+            type="text"
+            value={query}
+            onChange={e => {
+              setQuery(e.target.value);
+              onSearchChange?.(e.target.value);
+            }}
+            placeholder={searchPlaceholder}
+            className={cn(
+              "w-full pl-9 pr-3 h-9 rounded-xl text-sm",
+              "bg-[#f4f7f5] border border-[#c8e6d8]",
+              "text-slate-800 placeholder:text-slate-400",
+              "outline-none focus:border-[#1a7a52] focus:ring-2 focus:ring-[#1a7a52]/20",
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="overflow-y-auto max-h-72 p-1.5">
+        {filtered.length === 0 ? (
+          <div className="px-3 py-6 text-center text-sm text-slate-400">
+            No results for &ldquo;{query}&rdquo;
+          </div>
+        ) : (
+          filtered.map(opt => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleSelect(opt.value)}
+                className={cn(
+                  "w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left",
+                  "transition-all duration-150 group",
+                  isSelected
+                    ? "bg-[#e8f5ee] text-[#145c3f]"
+                    : "text-slate-700 hover:bg-[#f0fdf7] hover:text-[#145c3f]",
+                )}
+              >
+                {opt.sub && (
+                  <span className={cn(
+                    "text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 mt-0.5",
+                    isSelected
+                      ? "bg-[#145c3f] text-white"
+                      : "bg-[#e8f5ee] text-[#145c3f] group-hover:bg-[#d1f5e4]",
+                  )}>
+                    {opt.sub}
+                  </span>
+                )}
+                <span className="flex-1 text-sm font-medium leading-snug whitespace-normal break-words">
+                  {opt.label}
+                </span>
+                {isSelected && <Check className="w-4 h-4 text-[#145c3f] shrink-0 mt-0.5" />}
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      {query && (
+        <div className="px-3 py-1.5 border-t border-[#e8f5ee] text-[10px] text-[#5a7a6a] font-medium">
+          {filtered.length} of {options.length} results
+        </div>
+      )}
+    </div>
+  ) : null;
+
   return (
     <div ref={containerRef} className={cn("relative w-full", className)}>
-      {/* Trigger */}
       <button
         id={id}
         type="button"
@@ -97,15 +203,15 @@ export function SearchSelect({
           disabled && "opacity-50 cursor-not-allowed bg-slate-100",
         )}
       >
-        <span className={cn("flex-1 truncate", !selected && "text-slate-400")}>
+        <span className={cn("flex-1 min-w-0", !selected && "text-slate-400")}>
           {selected ? (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2 min-w-0">
               {selected.sub && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#e8f5ee] text-[#145c3f] shrink-0">
                   {selected.sub}
                 </span>
               )}
-              <span className="text-slate-800 font-medium">{selected.label}</span>
+              <span className="text-slate-800 font-medium truncate">{selected.label}</span>
             </span>
           ) : (
             placeholder
@@ -129,94 +235,9 @@ export function SearchSelect({
         </span>
       </button>
 
-      {/* Dropdown */}
-      {open && (
-        <div className={cn(
-          "absolute z-50 mt-1.5 w-full min-w-[240px]",
-          "bg-white rounded-2xl border border-[#d4e8dc]",
-          "shadow-[0_8px_32px_rgba(20,92,63,0.12),0_2px_8px_rgba(20,92,63,0.08)]",
-          "overflow-hidden",
-          // ensure dropdown is wide enough for long labels
-          "left-0",
-        )}>
-          {/* Search input */}
-          <div className="p-2 border-b border-[#e8f5ee]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5a7a6a]" />
-              <input
-                ref={searchRef}
-                type="text"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder={searchPlaceholder}
-                className={cn(
-                  "w-full pl-9 pr-3 h-9 rounded-xl text-sm",
-                  "bg-[#f4f7f5] border border-[#c8e6d8]",
-                  "text-slate-800 placeholder:text-slate-400",
-                  "outline-none focus:border-[#1a7a52] focus:ring-2 focus:ring-[#1a7a52]/20",
-                  "transition-all"
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Options list */}
-          <div className="overflow-y-auto max-h-64 p-1.5 scrollbar-thin">
-            {filtered.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-slate-400">
-                No results for &ldquo;{query}&rdquo;
-              </div>
-            ) : (
-              filtered.map(opt => {
-                const isSelected = opt.value === value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => handleSelect(opt.value)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left",
-                      "transition-all duration-150 group",
-                      isSelected
-                        ? "bg-[#e8f5ee] text-[#145c3f]"
-                        : "text-slate-700 hover:bg-[#f0fdf7] hover:text-[#145c3f]",
-                    )}
-                  >
-                    {/* Code badge */}
-                    {opt.sub && (
-                      <span className={cn(
-                        "text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0",
-                        isSelected
-                          ? "bg-[#145c3f] text-white"
-                          : "bg-[#e8f5ee] text-[#145c3f] group-hover:bg-[#d1f5e4]"
-                      )}>
-                        {opt.sub}
-                      </span>
-                    )}
-
-                    {/* Label — full text, no truncation */}
-                    <span className="flex-1 text-sm font-medium leading-snug whitespace-normal break-words">
-                      {opt.label}
-                    </span>
-
-                    {/* Check */}
-                    {isSelected && (
-                      <Check className="w-4 h-4 text-[#145c3f] shrink-0" />
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-
-          {/* Footer count */}
-          {query && (
-            <div className="px-3 py-1.5 border-t border-[#e8f5ee] text-[10px] text-[#5a7a6a] font-medium">
-              {filtered.length} of {options.length} results
-            </div>
-          )}
-        </div>
-      )}
+      {typeof document !== "undefined" && dropdown
+        ? createPortal(dropdown, document.body)
+        : null}
     </div>
   );
 }

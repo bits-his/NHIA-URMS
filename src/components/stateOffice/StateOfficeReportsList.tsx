@@ -12,9 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { stateOfficeApi } from "@/lib/api";
-import StateOfficeReportPage from "./StateOfficeReportPage";
-import StateOfficeReportDetail from "./StateOfficeReportDetail";
-import { REPORT_CONFIG, type StateOfficeReportType } from "./constants";
+import { buildReportingYearOptions } from "../monthly/reportingYears";
+import { ALL_STATES, useMonthlyStateFilter } from "../monthly/useMonthlyStateFilter";
+import { StateOfficeFormRouter, StateOfficeDetailRouter } from "./registry";
+import {
+  REPORT_CONFIG, MONTHS, monthLabel, quarterFromMonth, formatCount, formatDate,
+  reportLineTotal, reportLineCount, type StateOfficeReportType,
+} from "./constants";
 
 interface Report {
   id: number;
@@ -22,11 +26,12 @@ interface Report {
   reporting_year: number;
   reporting_month: number;
   submission_date: string | null;
+  submitted_by: string | null;
   status: "draft" | "submitted" | "approved";
   createdAt?: string;
   zone?: { description: string };
   state?: { description: string };
-  lines?: unknown[];
+  lines?: any[];
 }
 
 interface Props {
@@ -42,12 +47,6 @@ const STATUS_CONFIG = {
   approved:  { label: "Approved",  cls: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: <CheckCircle2 className="w-3 h-3" /> },
 };
 
-function safeDate(v: string | null | undefined) {
-  if (!v) return "—";
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" });
-}
-
 export default function StateOfficeReportsList({
   reportType, onBack, defaultZoneId, defaultStateId,
 }: Props) {
@@ -58,7 +57,25 @@ export default function StateOfficeReportsList({
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
   const [reports, setReports] = React.useState<Report[]>([]);
   const [loading, setLoading] = React.useState(true);
+
+  const {
+    showStateFilter,
+    states,
+    filterState,
+    setFilterState,
+    apiStateId,
+    stateFilterActive,
+  } = useMonthlyStateFilter(defaultStateId, defaultZoneId);
+
+  const [filterYear,   setFilterYear]   = React.useState("all");
+  const [filterMonth,  setFilterMonth]  = React.useState("all");
   const [filterStatus, setFilterStatus] = React.useState("all");
+
+  // Reset nested view when switching Enrolment / Migration / CEmONC in the sidebar
+  React.useEffect(() => {
+    setMode("list");
+    setSelectedId(null);
+  }, [reportType]);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -66,13 +83,15 @@ export default function StateOfficeReportsList({
       const res = await api.list({
         status: filterStatus !== "all" ? filterStatus : undefined,
         zone_id: defaultZoneId ?? undefined,
-        state_id: defaultStateId ?? undefined,
+        state_id: apiStateId,
+        year: filterYear !== "all" ? filterYear : undefined,
+        month: filterMonth !== "all" ? filterMonth : undefined,
       });
       setReports(res.data as Report[]);
     } catch (err: any) {
       toast.error("Failed to load", { description: err.message });
     } finally { setLoading(false); }
-  }, [api, filterStatus, defaultZoneId, defaultStateId]);
+  }, [api, filterStatus, defaultZoneId, apiStateId, filterYear, filterMonth]);
 
   React.useEffect(() => { load(); }, [load]);
 
@@ -83,9 +102,25 @@ export default function StateOfficeReportsList({
     approved:  reports.filter(r => r.status === "approved").length,
   }), [reports]);
 
+  const yearOptions = React.useMemo(
+    () => buildReportingYearOptions(reports.map(r => r.reporting_year)),
+    [reports],
+  );
+
+  const hasFilters = filterYear !== "all" || filterMonth !== "all" || filterStatus !== "all" || stateFilterActive;
+
+  const clearFilters = () => {
+    setFilterYear("all");
+    setFilterMonth("all");
+    setFilterStatus("all");
+    if (showStateFilter) setFilterState(ALL_STATES);
+  };
+
+  const showLocationCols = !defaultStateId || !defaultZoneId;
+
   if (mode === "view" && selectedId) {
     return (
-      <StateOfficeReportDetail
+      <StateOfficeDetailRouter
         reportType={reportType}
         reportId={selectedId}
         onBack={() => { setSelectedId(null); setMode("list"); }}
@@ -96,7 +131,7 @@ export default function StateOfficeReportsList({
 
   if (mode === "create" || mode === "edit") {
     return (
-      <StateOfficeReportPage
+      <StateOfficeFormRouter
         reportType={reportType}
         reportId={mode === "edit" ? selectedId : null}
         onBack={() => { setSelectedId(null); setMode("list"); load(); }}
@@ -148,35 +183,80 @@ export default function StateOfficeReportsList({
             ))}
           </div>
 
-          <Card className="rounded-2xl border-[#d4e8dc]">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex flex-row items-center gap-3">
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-full max-w-xs"
-                    displayValue={filterStatus === "all" ? "All Statuses" : STATUS_CONFIG[filterStatus as keyof typeof STATUS_CONFIG]?.label}>
-                    <SelectValue placeholder="Status" />
+          {/* Filters */}
+          <div className="flex flex-row flex-wrap items-center gap-3 w-full bg-white rounded-2xl border border-[#d4e8dc] px-5 py-4">
+            {showStateFilter && (
+              <div className="flex-1 min-w-[140px]">
+                <Select value={filterState} onValueChange={setFilterState}>
+                  <SelectTrigger className="w-full"
+                    displayValue={filterState === ALL_STATES
+                      ? "All States"
+                      : (states.find(s => String(s.id) === filterState)?.description ?? filterState)}>
+                    <SelectValue placeholder="All States" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="submitted">Submitted</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value={ALL_STATES}>All States</SelectItem>
+                    {states.map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.description}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {filterStatus !== "all" && (
-                  <Button variant="ghost" size="sm" className="text-slate-500 gap-1"
-                    onClick={() => setFilterStatus("all")}>
-                    <XCircle className="w-3.5 h-3.5" /> Clear
-                  </Button>
-                )}
               </div>
-            </CardContent>
-          </Card>
+            )}
+
+            <div className="flex-1 min-w-[120px]">
+              <Select value={filterYear} onValueChange={setFilterYear}>
+                <SelectTrigger className="w-full" displayValue={filterYear === "all" ? "All Years" : filterYear}>
+                  <SelectValue placeholder="All Years" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {yearOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1 min-w-[140px]">
+              <Select value={filterMonth} onValueChange={setFilterMonth}>
+                <SelectTrigger className="w-full"
+                  displayValue={filterMonth === "all" ? "All Months" : monthLabel(filterMonth)}>
+                  <SelectValue placeholder="All Months" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  {MONTHS.map(m => (
+                    <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1 min-w-[130px]">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full"
+                  displayValue={filterStatus === "all" ? "All Statuses" : STATUS_CONFIG[filterStatus as keyof typeof STATUS_CONFIG]?.label}>
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {hasFilters && (
+              <Button variant="ghost" size="sm" className="text-slate-500 gap-1 shrink-0" onClick={clearFilters}>
+                <XCircle className="w-3.5 h-3.5" /> Clear
+              </Button>
+            )}
+          </div>
 
           <Card className="rounded-2xl border-[#d4e8dc] shadow-sm overflow-hidden">
             <CardHeader className="pb-3 border-b border-[#d4e8dc]">
               <CardTitle className="text-sm font-bold">
-                {loading ? "Loading..." : `${reports.length} report(s)`}
+                {loading ? "Loading..." : `${reports.length} report${reports.length !== 1 ? "s" : ""}`}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -187,60 +267,78 @@ export default function StateOfficeReportsList({
               ) : reports.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
                   <FileText className="w-8 h-8 opacity-30" />
-                  <p className="text-sm font-medium">No reports found</p>
-                  <Button variant="outline" size="sm" className="mt-2 gap-2"
-                    onClick={() => { setSelectedId(null); setMode("create"); }}>
-                    <Plus className="w-4 h-4" /> New Report
-                  </Button>
+                  <p className="text-sm font-medium">{hasFilters ? "No reports match your filters" : "No reports found"}</p>
+                  {!hasFilters && (
+                    <Button variant="outline" size="sm" className="mt-2 gap-2"
+                      onClick={() => { setSelectedId(null); setMode("create"); }}>
+                      <Plus className="w-4 h-4" /> New Report
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-[#f0fdf7] hover:bg-[#f0fdf7]">
-                      <TableHead className="text-xs font-bold text-slate-600">Reference</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Zone</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">State</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Period</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Lines</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Submitted</TableHead>
-                      <TableHead className="text-xs font-bold text-slate-600">Status</TableHead>
-                      <TableHead className="text-right text-xs font-bold text-slate-600">View</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-[#f0fdf7] hover:bg-[#f0fdf7]">
+                        <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Reference</TableHead>
+                        {showLocationCols && (
+                          <>
+                            <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Zone</TableHead>
+                            <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">State</TableHead>
+                          </>
+                        )}
+                        <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Year</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Month</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Quarter</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 text-right whitespace-nowrap">Entries</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 text-right whitespace-nowrap">{cfg.totalLabel}</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Submitted By</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Date Submitted</TableHead>
+                        <TableHead className="text-xs font-bold text-slate-600 whitespace-nowrap">Status</TableHead>
+                        <TableHead className="text-right text-xs font-bold text-slate-600 whitespace-nowrap">View</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {reports.map((r, i) => {
                       const sc = STATUS_CONFIG[r.status];
                       return (
-                        <motion.tr key={r.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.02 }}
-                          className="hover:bg-[#f8fdfb] transition-colors border-b border-slate-100 last:border-0">
-                          <TableCell>
-                            <span className="font-mono text-xs font-bold text-primary">{r.reference_id}</span>
-                          </TableCell>
-                          <TableCell className="text-sm text-slate-600">{r.zone?.description || "—"}</TableCell>
-                          <TableCell className="text-sm font-semibold text-slate-800">{r.state?.description || "—"}</TableCell>
-                          <TableCell className="text-sm text-slate-600">
-                            {r.reporting_month}/{r.reporting_year}
-                          </TableCell>
-                          <TableCell className="text-sm text-slate-500">{r.lines?.length ?? 0}</TableCell>
-                          <TableCell className="text-xs text-slate-400">{safeDate(r.submission_date || r.createdAt)}</TableCell>
-                          <TableCell>
-                            <Badge className={`text-[10px] px-2 py-0.5 flex items-center gap-1 w-fit border ${sc.cls}`}>
-                              {sc.icon} {sc.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="sm"
-                              className="h-7 w-7 p-0 text-slate-400 hover:text-primary hover:bg-primary/10"
-                              onClick={() => { setSelectedId(r.id); setMode("view"); }}>
-                              <Eye className="w-3.5 h-3.5" />
-                            </Button>
-                          </TableCell>
-                        </motion.tr>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                          <motion.tr key={r.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.02 }}
+                            className="hover:bg-[#f8fdfb] transition-colors border-b border-slate-100 last:border-0">
+                            <TableCell>
+                              <span className="font-mono text-xs font-bold text-primary">{r.reference_id}</span>
+                            </TableCell>
+                            {showLocationCols && (
+                              <>
+                                <TableCell className="text-sm text-slate-600 whitespace-nowrap">{r.zone?.description || "—"}</TableCell>
+                                <TableCell className="text-sm font-semibold text-slate-800 whitespace-nowrap">{r.state?.description || "—"}</TableCell>
+                              </>
+                            )}
+                            <TableCell className="text-sm font-semibold text-slate-800 whitespace-nowrap">{r.reporting_year}</TableCell>
+                            <TableCell className="text-sm text-slate-600 whitespace-nowrap">{monthLabel(r.reporting_month)}</TableCell>
+                            <TableCell className="text-sm text-slate-500 whitespace-nowrap">Q{quarterFromMonth(r.reporting_month)}</TableCell>
+                            <TableCell className="text-sm text-slate-500 text-right tabular-nums">{reportLineCount(reportType, r)}</TableCell>
+                            <TableCell className="text-sm font-semibold text-slate-800 text-right tabular-nums">{formatCount(reportLineTotal(reportType, r))}</TableCell>
+                            <TableCell className="text-sm text-slate-500 whitespace-nowrap">{r.submitted_by || "—"}</TableCell>
+                            <TableCell className="text-xs text-slate-500 whitespace-nowrap">{formatDate(r.submission_date)}</TableCell>
+                            <TableCell>
+                              <Badge className={`text-[10px] px-2 py-0.5 flex items-center gap-1 w-fit border ${sc.cls}`}>
+                                {sc.icon} {sc.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm"
+                                className="h-7 w-7 p-0 text-slate-400 hover:text-primary hover:bg-primary/10"
+                                onClick={() => { setSelectedId(r.id); setMode("view"); }}>
+                                <Eye className="w-3.5 h-3.5" />
+                              </Button>
+                            </TableCell>
+                          </motion.tr>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>

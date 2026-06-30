@@ -33,6 +33,9 @@ import AnnualReportDetail from "./AnnualReportDetail";
 import StockVerificationsList from "./StockVerificationsList";
 import StockAssetManager from "./StockAssetManager";
 import StateOfficeReportsList from "./stateOffice/StateOfficeReportsList";
+import StateOfficeComplaintsPage from "./stateOffice/StateOfficeComplaintsPage";
+import StateOfficeComplianceVisitsPage from "./stateOffice/StateOfficeComplianceVisitsPage";
+import StateOfficeReconciliationPage from "./stateOffice/StateOfficeReconciliationPage";
 import ServicomDashboard from "./servicom/ServicomDashboard";
 import ServicomVisitsPage from "./servicom/ServicomVisitsPage";
 import ServicomComplaintsPage from "./servicom/ServicomComplaintsPage";
@@ -57,7 +60,7 @@ import { getMonthlyReportContext } from "@/src/access/monthlyReportAccess";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Role = "state-officer" | "zonal-coordinator" | "state-coordinator" | "department-officer" | "sdo" | "hq-department" | "audit" | "dg-ceo" | "admin";
-type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verifications-list" | "stock-assets" | "servicom-dashboard" | "servicom-visits" | "servicom-complaints" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review" | "notifications" | "state-enrolment" | "state-migration" | "state-cemonc";
+type View = "home" | "report-entry" | "report-preview" | "zonal-review" | "zonal-compose" | "annual-report" | "annual-reports-list" | "annual-report-detail" | "settings" | "stock-verifications-list" | "stock-assets" | "servicom-dashboard" | "servicom-visits" | "servicom-complaints" | "finance-monthly" | "admin-monthly" | "programmes-monthly" | "outreach-monthly" | "sqa-monthly" | "complaints-monthly" | "monthly-reports-list" | "report-review" | "notifications" | "state-enrolment" | "state-migration" | "state-cemonc" | "state-complaints" | "state-compliance-monitoring" | "state-reconciliation" | "state-accreditation" | "state-stakeholder" | "state-hmo-selection" | "state-challenges";
 interface DashboardProps { role: Role; user?: import("@/src/store/authSlice").AuthUser; access?: import("@/src/access/types").AccessEntry[]; functionalities?: string; onLogout: () => void; }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -842,15 +845,43 @@ export default function Dashboard({ role, user, access = [], functionalities = "
                 defaultZoneId={monthlyCtx.defaultZoneId}
               />
             ) : view === "state-enrolment" ? (
-              <StateOfficeReportsList reportType="enrolment" onBack={() => setView("home")}
+              <StateOfficeReportsList key="state-enrolment" reportType="enrolment" onBack={() => setView("home")}
                 defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
                 defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
             ) : view === "state-migration" ? (
-              <StateOfficeReportsList reportType="migration" onBack={() => setView("home")}
+              <StateOfficeReportsList key="state-migration" reportType="migration" onBack={() => setView("home")}
                 defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
                 defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
             ) : view === "state-cemonc" ? (
-              <StateOfficeReportsList reportType="cemonc" onBack={() => setView("home")}
+              <StateOfficeReportsList key="state-cemonc" reportType="cemonc" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-complaints" ? (
+              <StateOfficeComplaintsPage key="state-complaints" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-compliance-monitoring" ? (
+              <StateOfficeComplianceVisitsPage key="state-compliance-monitoring" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-reconciliation" ? (
+              <StateOfficeReconciliationPage key="state-reconciliation" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-accreditation" ? (
+              <StateOfficeReportsList key="state-accreditation" reportType="accreditation" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-stakeholder" ? (
+              <StateOfficeReportsList key="state-stakeholder" reportType="stakeholder" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-hmo-selection" ? (
+              <StateOfficeReportsList key="state-hmo-selection" reportType="hmo-selection" onBack={() => setView("home")}
+                defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
+                defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
+            ) : view === "state-challenges" ? (
+              <StateOfficeReportsList key="state-challenges" reportType="challenges" onBack={() => setView("home")}
                 defaultZoneId={user?.zone_id ? String(user.zone_id) : monthlyCtx.defaultZoneId}
                 defaultStateId={user?.state_id ? String(user.state_id) : monthlyCtx.defaultStateId} />
             ) : view === "settings" ? (

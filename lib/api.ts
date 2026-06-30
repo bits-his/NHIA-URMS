@@ -368,7 +368,9 @@ export const servicomApi = {
 
 // ─── State Office Unified Monthly Reports ─────────────────────────────────────
 
-export type StateOfficeReportType = "enrolment" | "migration" | "cemonc";
+export type StateOfficeReportType =
+  | "enrolment" | "migration" | "cemonc"
+  | "complaints" | "accreditation" | "stakeholder" | "hmo-selection" | "challenges";
 
 const makeStateOfficeApi = (type: StateOfficeReportType) => ({
   list: (filters?: { state_id?: string; zone_id?: string; year?: string; month?: string; status?: string }) => {
@@ -397,5 +399,86 @@ export const stateOfficeApi = {
   enrolment: makeStateOfficeApi("enrolment"),
   migration: makeStateOfficeApi("migration"),
   cemonc:    makeStateOfficeApi("cemonc"),
+  complaints: makeStateOfficeApi("complaints"),
+  accreditation: makeStateOfficeApi("accreditation"),
+  stakeholder: makeStateOfficeApi("stakeholder"),
+  "hmo-selection": makeStateOfficeApi("hmo-selection"),
+  challenges: makeStateOfficeApi("challenges"),
+};
+
+const stateOfficeFilters = (filters?: Record<string, string | undefined>) => {
+  const p = new URLSearchParams(
+    Object.entries(filters || {}).filter(([, v]) => !!v) as [string, string][]
+  ).toString();
+  return p ? `?${p}` : "";
+};
+
+export const stateOfficeEnrolleeComplaintsApi = {
+  summary: (filters?: { state_id?: string; zone_id?: string; year?: string; month?: string }) =>
+    request<{ success: boolean; data: {
+      summary: { against_type: string; count: number }[];
+      status: { status: string; count: number }[];
+      total_complaints: number;
+    } }>(`/state-office/enrollee-complaints/summary${stateOfficeFilters(filters)}`),
+  list: (filters?: {
+    state_id?: string; zone_id?: string; year?: string; month?: string;
+    against_type?: string; status?: string;
+  }) =>
+    request<{ success: boolean; data: any[] }>(
+      `/state-office/enrollee-complaints${stateOfficeFilters(filters)}`
+    ),
+  get: (id: number | string) =>
+    request<{ success: boolean; data: any }>(`/state-office/enrollee-complaints/${id}`),
+  create: (payload: any) =>
+    request<{ success: boolean; data: any }>("/state-office/enrollee-complaints", {
+      method: "POST", body: JSON.stringify(payload),
+    }),
+  update: (id: number | string, payload: any) =>
+    request<{ success: boolean; data: any }>(`/state-office/enrollee-complaints/${id}`, {
+      method: "PUT", body: JSON.stringify(payload),
+    }),
+};
+
+export const stateOfficeAccreditedProvidersApi = {
+  list: (filters: { type: "hmo" | "hcp"; q?: string; limit?: string; state_id?: string }) =>
+    request<{ success: boolean; data: any[] }>(
+      `/state-office/accredited-providers${stateOfficeFilters(filters)}`
+    ),
+  sync: () =>
+    request<{ success: boolean; data: { hmoCount: number; hcpCount: number; total: number } }>(
+      "/state-office/accredited-providers/sync", { method: "POST" }
+    ),
+};
+
+export const stateOfficeReconciliationApi = {
+  list: (filters?: { state_id?: string; zone_id?: string; year?: string; month?: string }) =>
+    request<{ success: boolean; data: any[] }>(
+      `/state-office/reconciliation-meetings${stateOfficeFilters(filters)}`
+    ),
+  create: (payload: any) =>
+    request<{ success: boolean; data: any }>("/state-office/reconciliation-meetings", {
+      method: "POST", body: JSON.stringify(payload),
+    }),
+  update: (id: number | string, payload: any) =>
+    request<{ success: boolean; data: any }>(`/state-office/reconciliation-meetings/${id}`, {
+      method: "PUT", body: JSON.stringify(payload),
+    }),
+};
+
+export const stateOfficeComplianceVisitsApi = {
+  list: (filters?: { state_id?: string; zone_id?: string; year?: string; month?: string; status?: string }) =>
+    request<{ success: boolean; data: any[] }>(
+      `/state-office/compliance-visits${stateOfficeFilters(filters)}`
+    ),
+  get: (id: number | string) =>
+    request<{ success: boolean; data: any }>(`/state-office/compliance-visits/${id}`),
+  create: (payload: any) =>
+    request<{ success: boolean; data: any }>("/state-office/compliance-visits", {
+      method: "POST", body: JSON.stringify(payload),
+    }),
+  update: (id: number | string, payload: any) =>
+    request<{ success: boolean; data: any }>(`/state-office/compliance-visits/${id}`, {
+      method: "PUT", body: JSON.stringify(payload),
+    }),
 };
 

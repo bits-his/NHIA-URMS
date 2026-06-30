@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { stateOfficeApi } from "@/lib/api";
 import {
   REPORT_CONFIG, ENROLMENT_CATEGORIES, MIGRATION_REQUEST_TYPES, CEMONC_INTERVENTIONS,
-  monthLabel, quarterFromMonth, labelOf, formatCount, formatDate,
+  monthLabel, quarterFromMonth, labelOf, formatCount, formatDate, reportLineTotal,
   type StateOfficeReportType,
 } from "./constants";
 
@@ -60,16 +60,7 @@ export default function StateOfficeReportDetail({ reportType, reportId, onBack, 
 
   const lines: any[] = report?.lines ?? [];
   const quarter = report ? quarterFromMonth(report.reporting_month) : 0;
-
-  const total = React.useMemo(() => {
-    if (reportType === "enrolment") {
-      return lines.reduce((s, l) => s + (Number(l.enrolment_count) || 0), 0);
-    }
-    if (reportType === "migration") {
-      return lines.reduce((s, l) => s + (Number(l.request_count) || 0), 0);
-    }
-    return lines.reduce((s, l) => s + (Number(l.beneficiaries) || 0), 0);
-  }, [lines, reportType]);
+  const total = React.useMemo(() => reportLineTotal(reportType, report ?? {}), [report, reportType]);
 
   const statusCfg = report ? STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] : null;
 

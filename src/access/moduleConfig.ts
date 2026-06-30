@@ -122,6 +122,23 @@ export const MODULE_CONFIG: ParentModule[] = [
       { type: "group", label: "CEmONC & FFP", children: [
         { title: "CEmONC & FFP Beneficiaries", view: "state-cemonc" },
       ]},
+      { type: "group", label: "Complaints & Compliance", children: [
+        { title: "Enrollee Complaints", view: "state-complaints" },
+        { title: "Compliance Monitoring", view: "state-compliance-monitoring" },
+        { title: "Reconciliation Meetings", view: "state-reconciliation" },
+      ]},
+      { type: "group", label: "Accreditation & Reaccreditation", children: [
+        { title: "Accreditation / Reaccreditation", view: "state-accreditation" },
+      ]},
+      { type: "group", label: "Stakeholder Engagement", children: [
+        { title: "Stakeholder Engagement", view: "state-stakeholder" },
+      ]},
+      { type: "group", label: "HMO Selection", children: [
+        { title: "HMO Selection Process", view: "state-hmo-selection" },
+      ]},
+      { type: "group", label: "Challenges & Recommendations", children: [
+        { title: "Challenges & Recommendations", view: "state-challenges" },
+      ]},
     ],
   },
 
