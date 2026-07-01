@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { stockApi, stateOfficeApi } from "@/lib/api";
 import {
-  REPORT_CONFIG, MONTHS, SSHIA_SUB_HEADS,
+  REPORT_CONFIG, MONTHS, SSHIA_SUB_HEADS, SSHIA_COLUMNS,
   monthLabel, quarterFromMonth, labelOf, formatNaira, calcSshiaLine,
 } from "./constants";
 
@@ -469,12 +469,14 @@ export default function SshiaFinancialReportPage({
                           <TableRow className="bg-[#f0fdf7] hover:bg-[#f0fdf7]">
                             <TableHead className="text-xs font-bold text-slate-600 w-12">#</TableHead>
                             <TableHead className="text-xs font-bold text-slate-600">Sub-head</TableHead>
-                            <TableHead className="text-xs font-bold text-slate-600 text-right">A (₦)</TableHead>
-                            <TableHead className="text-xs font-bold text-slate-600 text-right">B (₦)</TableHead>
-                            <TableHead className="text-xs font-bold text-slate-600 text-right">C (₦)</TableHead>
-                            <TableHead className="text-xs font-bold text-slate-600 text-right">D (₦)</TableHead>
-                            <TableHead className="text-xs font-bold text-slate-600 text-right">E (₦)</TableHead>
-                            <TableHead className="text-xs font-bold text-slate-600 text-right">F (%)</TableHead>
+                            {SSHIA_COLUMNS.map(col => (
+                              <TableHead key={col.key} className="text-xs font-bold text-slate-600 text-right min-w-[7rem]">
+                                <div>{col.label}</div>
+                                <div className="text-[10px] font-normal text-slate-500 whitespace-nowrap">
+                                  {col.code}{col.hint ? ` = ${col.hint}` : ""} ({col.unit})
+                                </div>
+                              </TableHead>
+                            ))}
                             <TableHead className="w-[40px]" />
                           </TableRow>
                         </TableHeader>

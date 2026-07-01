@@ -141,6 +141,16 @@ export const SSHIA_SUB_HEADS = [
   { value: "operations",      label: "Operations" },
 ];
 
+/** Column definitions for SSHIA financial tables (form + view). */
+export const SSHIA_COLUMNS = [
+  { key: "opening_balance",    label: "Opening Bal",         code: "A", hint: "",       unit: "₦" },
+  { key: "receipts",           label: "Receipts",            code: "B", hint: "",       unit: "₦" },
+  { key: "total_budget",       label: "Total Budget",          code: "C", hint: "A+B",    unit: "₦" },
+  { key: "actual_expenditure", label: "Actual Expenditure",    code: "D", hint: "",       unit: "₦" },
+  { key: "balance",            label: "Balance",               code: "E", hint: "C−D",    unit: "₦" },
+  { key: "variance_pct",       label: "Variance %",            code: "F", hint: "C÷D×100", unit: "%" },
+] as const;
+
 export const EXPENDITURE_SUB_HEADS = [
   { value: "fuel_lub",               label: "FUEL & LUB" },
   { value: "newspapers_periodicals", label: "NEWSPAPERS & PERIODICALS" },
